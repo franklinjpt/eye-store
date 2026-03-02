@@ -27,6 +27,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY --from=deps /app/node_modules /app/node_modules
+COPY --from=deps /app/apps/backend/node_modules /app/apps/backend/node_modules
 COPY --from=build /app/apps/backend/dist /app/apps/backend/dist
 COPY --from=build /app/apps/backend/package.json /app/apps/backend/package.json
 COPY --from=build /app/packages/shared /app/packages/shared
