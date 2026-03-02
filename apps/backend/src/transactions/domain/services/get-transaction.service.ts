@@ -78,8 +78,9 @@ export class GetTransactionService implements GetTransactionUseCase {
         this.logger.log(
           `[execute] Updating DB status for ${id}: ${transaction.status} → ${mapped}`,
         );
-        const updatedTransaction = await this.transactionRepository.updateStatus(id, mapped);
-        
+        const updatedTransaction =
+          await this.transactionRepository.updateStatus(id, mapped);
+
         // Decrement stock if status changed to APPROVED
         if (mapped === TransactionStatus.APPROVED) {
           this.logger.log(
@@ -87,7 +88,7 @@ export class GetTransactionService implements GetTransactionUseCase {
           );
           await this.productRepository.decrementStock(transaction.productId, 1);
         }
-        
+
         return updatedTransaction;
       }
     }
