@@ -7,8 +7,8 @@ import type {
   CheckoutStep,
   DeliveryInfo,
   TransactionResult,
-  Product,
 } from '@/types';
+import type { RootState } from '@/store';
 import {
   createTransaction,
   fetchTransactionStatus,
@@ -42,15 +42,14 @@ const initialState: CheckoutState = {
   error: null,
 };
 
-type StoreState = {
-  checkout: CheckoutState;
-  products: { items: Product[] };
-};
-
-export const processPayment = createAsyncThunk(
+export const processPayment = createAsyncThunk<
+  TransactionResult,
+  void,
+  { state: RootState }
+>(
   'checkout/processPayment',
   async (_, { getState }) => {
-    const state = getState() as StoreState;
+    const state = getState();
     const { selectedProductId, cardTokenId, acceptanceToken, deliveryInfo } =
       state.checkout;
 
@@ -63,9 +62,7 @@ export const processPayment = createAsyncThunk(
       throw new Error('Missing payment data');
     }
 
-    const product = state.products.items.find(
-      (p: Product) => p.id === selectedProductId,
-    );
+    const product = state.products.items.find((p) => p.id === selectedProductId);
     if (!product) {
       throw new Error('Product not found');
     }

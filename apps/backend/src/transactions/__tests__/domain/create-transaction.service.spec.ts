@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CHECKOUT_FEES_CENTS } from '@eye-store/shared';
 import { ProductType } from '../../../products/domain/models/product-type.enum';
 import { ProductRepositoryPort } from '../../../products/domain/ports/outbound/product-repository.port';
 import { PRODUCT_REPOSITORY_PORT } from '../../../products/products.tokens';
@@ -22,6 +23,11 @@ const command: CreateTransactionCommand = {
   deliveryCity: 'Bogota',
   customerPhone: '3001234567',
 };
+
+const expectedTransactionAmountCents =
+  Math.round(100000) * 100 +
+  CHECKOUT_FEES_CENTS.base +
+  CHECKOUT_FEES_CENTS.delivery;
 
 describe('CreateTransactionService', () => {
   let service: CreateTransactionService;
@@ -113,7 +119,7 @@ describe('CreateTransactionService', () => {
     transactionRepository.save.mockResolvedValue({
       id: 'tx-1',
       productId: command.productId,
-      amountInCents: 10700000,
+      amountInCents: expectedTransactionAmountCents,
       currency: 'COP',
       status: TransactionStatus.PENDING,
       wompiTransactionId: null,
@@ -130,7 +136,7 @@ describe('CreateTransactionService', () => {
     transactionRepository.updateStatus.mockResolvedValue({
       id: 'tx-1',
       productId: command.productId,
-      amountInCents: 10700000,
+      amountInCents: expectedTransactionAmountCents,
       currency: 'COP',
       status: TransactionStatus.ERROR,
       wompiTransactionId: null,
@@ -171,7 +177,7 @@ describe('CreateTransactionService', () => {
     transactionRepository.save.mockResolvedValue({
       id: 'tx-1',
       productId: command.productId,
-      amountInCents: 10700000,
+      amountInCents: expectedTransactionAmountCents,
       currency: 'COP',
       status: TransactionStatus.PENDING,
       wompiTransactionId: null,
@@ -191,7 +197,7 @@ describe('CreateTransactionService', () => {
     transactionRepository.updateStatusFromPending.mockResolvedValue({
       id: 'tx-1',
       productId: command.productId,
-      amountInCents: 10700000,
+      amountInCents: expectedTransactionAmountCents,
       currency: 'COP',
       status: TransactionStatus.APPROVED,
       wompiTransactionId: 'wompi-1',
@@ -217,6 +223,11 @@ describe('CreateTransactionService', () => {
       TransactionStatus.APPROVED,
       'wompi-1',
     );
+    expect(paymentGateway.createPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amountInCents: expectedTransactionAmountCents,
+      }),
+    );
     expect(productRepository.decrementStock).toHaveBeenCalledWith(
       command.productId,
       1,
@@ -238,7 +249,7 @@ describe('CreateTransactionService', () => {
     transactionRepository.save.mockResolvedValue({
       id: 'tx-1',
       productId: command.productId,
-      amountInCents: 10700000,
+      amountInCents: expectedTransactionAmountCents,
       currency: 'COP',
       status: TransactionStatus.PENDING,
       wompiTransactionId: null,
@@ -259,7 +270,7 @@ describe('CreateTransactionService', () => {
     transactionRepository.findById.mockResolvedValue({
       id: 'tx-1',
       productId: command.productId,
-      amountInCents: 10700000,
+      amountInCents: expectedTransactionAmountCents,
       currency: 'COP',
       status: TransactionStatus.APPROVED,
       wompiTransactionId: 'wompi-1',

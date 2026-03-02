@@ -1,0 +1,17 @@
+{
+  "name": "@eye-store/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "./index.cjs",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./index.cjs",
+      "default": "./index.mjs"
+    }
+  }
+}

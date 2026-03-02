@@ -20,9 +20,10 @@ export class WompiPaymentAdapter implements PaymentGatewayPort {
   private readonly integrityKey: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.apiUrl = this.configService.get<string>('WOMPI_API_URL');
-    this.privateKey = this.configService.get<string>('WOMPI_PRIVATE_KEY');
-    this.integrityKey = this.configService.get<string>('WOMPI_INTEGRITY_KEY');
+    this.apiUrl = this.configService.getOrThrow<string>('WOMPI_API_URL');
+    this.privateKey = this.configService.getOrThrow<string>('WOMPI_PRIVATE_KEY');
+    this.integrityKey =
+      this.configService.getOrThrow<string>('WOMPI_INTEGRITY_KEY');
   }
 
   private generateSignature(

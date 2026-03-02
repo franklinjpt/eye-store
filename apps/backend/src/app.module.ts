@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { validateEnv } from './config/env.validation';
 import { ProductsModule } from './products/products.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { HealthController } from './health/health.controller';
@@ -24,7 +25,15 @@ const typeOrmImports = useInMemory
     ];
 
 @Module({
-  imports: [ConfigModule.forRoot(), ...typeOrmImports, ProductsModule, TransactionsModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),
+    ...typeOrmImports,
+    ProductsModule,
+    TransactionsModule,
+  ],
   controllers: [HealthController],
 })
 export class AppModule {}

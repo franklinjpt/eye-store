@@ -12,6 +12,7 @@
     "test:cov": "vitest run --coverage"
   },
   "dependencies": {
+    "@eye-store/shared": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "^2.11.2",
     "clsx": "^2.1.1",

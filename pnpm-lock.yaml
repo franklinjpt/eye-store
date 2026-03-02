@@ -8,6 +8,9 @@ importers:
 
   apps/backend:
     dependencies:
+      '@eye-store/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@nestjs/common':
         specifier: ^10.0.0
         version: 10.4.22(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -108,6 +111,9 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@eye-store/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
@@ -196,6 +202,8 @@ importers:
       vitest:
         specifier: ^4.0.8
         version: 4.0.18(@types/node@24.11.0)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(lightningcss@1.31.1)(terser@5.46.0)
+
+  packages/shared: {}
 
 packages:
 

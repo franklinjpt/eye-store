@@ -1,3 +1,4 @@
+import { CHECKOUT_FEES_PESOS } from '@eye-store/shared';
 import type { Product } from '@/types';
 import { ShoppingBag, ArrowLeft, Loader2 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -9,8 +10,7 @@ import {
   goBackToPayment,
 } from '@/store/slices/checkout.slice';
 
-const BASE_FEE = 2000;
-const DELIVERY_FEE = 5000;
+const { base: BASE_FEE, delivery: DELIVERY_FEE } = CHECKOUT_FEES_PESOS;
 
 function formatCOP(amount: number): string {
   return new Intl.NumberFormat('es-CO', {

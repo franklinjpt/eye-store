@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { CHECKOUT_FEES_CENTS } from '@eye-store/shared';
 import {
   CreateTransactionCommand,
   CreateTransactionUseCase,
@@ -27,8 +28,8 @@ import {
 } from '../errors/transaction.failure';
 import { WompiStatusMapper } from '../mappers/wompi-status.mapper';
 
-const BASE_FEE_CENTS = 200000; // $2,000 COP
-const DELIVERY_FEE_CENTS = 500000; // $5,000 COP
+const { base: BASE_FEE_CENTS, delivery: DELIVERY_FEE_CENTS } =
+  CHECKOUT_FEES_CENTS;
 
 type PreparedTransaction = {
   product: Product;
