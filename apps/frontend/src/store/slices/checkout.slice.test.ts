@@ -105,27 +105,29 @@ describe('checkoutSlice/processPayment', () => {
   });
 
   it('should reject when checkout data is missing', async () => {
+    const preloadedState: RootState = {
+      products: { items: [], loading: false, error: null },
+      checkout: {
+        currentStep: 'summary',
+        selectedProductId: null,
+        deliveryInfo: null,
+        cardTokenId: null,
+        acceptanceToken: null,
+        transactionResult: null,
+        isProcessing: false,
+        isPolling: false,
+        error: null,
+      },
+      ui: { isModalOpen: false },
+    };
+
     const store = configureStore({
       reducer: {
         products: productsSlice.reducer,
         checkout: checkoutSlice.reducer,
         ui: uiSlice.reducer,
       },
-      preloadedState: {
-        products: { items: [], loading: false, error: null },
-        checkout: {
-          currentStep: 'summary',
-          selectedProductId: null,
-          deliveryInfo: null,
-          cardTokenId: null,
-          acceptanceToken: null,
-          transactionResult: null,
-          isProcessing: false,
-          isPolling: false,
-          error: null,
-        },
-        ui: { isModalOpen: false },
-      },
+      preloadedState,
     });
 
     const result = await store.dispatch(processPayment());
@@ -137,33 +139,35 @@ describe('checkoutSlice/processPayment', () => {
   });
 
   it('should reject when product is not found in store', async () => {
+    const preloadedState: RootState = {
+      products: { items: [], loading: false, error: null },
+      checkout: {
+        currentStep: 'summary',
+        selectedProductId: 'product-missing',
+        deliveryInfo: {
+          fullName: 'Jane Doe',
+          email: 'jane@example.com',
+          address: 'Street 123',
+          city: 'Bogota',
+          phone: '3001234567',
+        },
+        cardTokenId: 'tok_test',
+        acceptanceToken: 'accept_test',
+        transactionResult: null,
+        isProcessing: false,
+        isPolling: false,
+        error: null,
+      },
+      ui: { isModalOpen: false },
+    };
+
     const store = configureStore({
       reducer: {
         products: productsSlice.reducer,
         checkout: checkoutSlice.reducer,
         ui: uiSlice.reducer,
       },
-      preloadedState: {
-        products: { items: [], loading: false, error: null },
-        checkout: {
-          currentStep: 'summary',
-          selectedProductId: 'product-missing',
-          deliveryInfo: {
-            fullName: 'Jane Doe',
-            email: 'jane@example.com',
-            address: 'Street 123',
-            city: 'Bogota',
-            phone: '3001234567',
-          },
-          cardTokenId: 'tok_test',
-          acceptanceToken: 'accept_test',
-          transactionResult: null,
-          isProcessing: false,
-          isPolling: false,
-          error: null,
-        },
-        ui: { isModalOpen: false },
-      },
+      preloadedState,
     });
 
     const result = await store.dispatch(processPayment());

@@ -10,8 +10,6 @@ import { checkoutSlice } from '@/store/slices/checkout.slice';
 import { uiSlice } from '@/store/slices/ui.slice';
 import { CatalogView } from './catalog-view.component';
 
-let capturedOnBuy: ((id: string) => void) | undefined;
-
 vi.mock('@/components/product/product-card.component', () => ({
   ProductCard: ({
     product,
@@ -20,7 +18,6 @@ vi.mock('@/components/product/product-card.component', () => ({
     product: Product;
     onBuy: (id: string) => void;
   }) => {
-    capturedOnBuy = onBuy;
     return (
       <div data-testid={`product-card-${product.id}`}>
         <span>{product.name}</span>
@@ -54,32 +51,34 @@ function createProduct(overrides?: Partial<Product>): Product {
 }
 
 function createStore(overrides?: Partial<RootState['products']>) {
+  const preloadedState: RootState = {
+    products: {
+      items: [],
+      loading: false,
+      error: null,
+      ...overrides,
+    },
+    checkout: {
+      currentStep: 'catalog',
+      selectedProductId: null,
+      deliveryInfo: null,
+      cardTokenId: null,
+      acceptanceToken: null,
+      transactionResult: null,
+      isProcessing: false,
+      isPolling: false,
+      error: null,
+    },
+    ui: { isModalOpen: false },
+  };
+
   return configureStore({
     reducer: {
       products: productsSlice.reducer,
       checkout: checkoutSlice.reducer,
       ui: uiSlice.reducer,
     },
-    preloadedState: {
-      products: {
-        items: [],
-        loading: false,
-        error: null,
-        ...overrides,
-      },
-      checkout: {
-        currentStep: 'catalog',
-        selectedProductId: null,
-        deliveryInfo: null,
-        cardTokenId: null,
-        acceptanceToken: null,
-        transactionResult: null,
-        isProcessing: false,
-        isPolling: false,
-        error: null,
-      },
-      ui: { isModalOpen: false },
-    },
+    preloadedState,
   });
 }
 

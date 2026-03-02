@@ -17,11 +17,6 @@ type CreditCardData = {
   cardholderName: string;
 };
 
-let cardFormOnSubmit: ((data: CreditCardData) => void) | undefined;
-let cardFormOnBack: (() => void) | undefined;
-let deliveryFormOnSubmit: ((info: DeliveryInfo) => void) | undefined;
-let deliveryFormOnBack: (() => void) | undefined;
-
 vi.mock('./credit-card-form.component', () => ({
   CreditCardForm: ({
     onSubmit,
@@ -32,8 +27,6 @@ vi.mock('./credit-card-form.component', () => ({
     onBack?: () => void;
     isLoading?: boolean;
   }) => {
-    cardFormOnSubmit = onSubmit;
-    cardFormOnBack = onBack;
     return (
       <div data-testid='credit-card-form'>
         <span>{isLoading ? 'Tokenizing...' : 'Card Form'}</span>
@@ -69,8 +62,6 @@ vi.mock('./delivery-form.component', () => ({
     onBack: () => void;
     initialValues?: DeliveryInfo | null;
   }) => {
-    deliveryFormOnSubmit = onSubmit;
-    deliveryFormOnBack = onBack;
     return (
       <div data-testid='delivery-form'>
         <span>Delivery Form</span>
@@ -111,28 +102,30 @@ vi.mock('@/services/api.service', () => ({
 }));
 
 function createStore(overrides?: Partial<RootState['checkout']>) {
+  const preloadedState: RootState = {
+    products: { items: [], loading: false, error: null },
+    checkout: {
+      currentStep: 'payment',
+      selectedProductId: 'product-1',
+      deliveryInfo: null,
+      cardTokenId: null,
+      acceptanceToken: null,
+      transactionResult: null,
+      isProcessing: false,
+      isPolling: false,
+      error: null,
+      ...overrides,
+    },
+    ui: { isModalOpen: false },
+  };
+
   return configureStore({
     reducer: {
       products: productsSlice.reducer,
       checkout: checkoutSlice.reducer,
       ui: uiSlice.reducer,
     },
-    preloadedState: {
-      products: { items: [], loading: false, error: null },
-      checkout: {
-        currentStep: 'payment',
-        selectedProductId: 'product-1',
-        deliveryInfo: null,
-        cardTokenId: null,
-        acceptanceToken: null,
-        transactionResult: null,
-        isProcessing: false,
-        isPolling: false,
-        error: null,
-        ...overrides,
-      },
-      ui: { isModalOpen: false },
-    },
+    preloadedState,
   });
 }
 

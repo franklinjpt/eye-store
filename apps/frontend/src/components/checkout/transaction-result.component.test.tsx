@@ -23,28 +23,30 @@ vi.mock('@/services/api.service', () => ({
 }));
 
 function createStore(overrides?: Partial<RootState['checkout']>) {
+  const preloadedState: RootState = {
+    products: { items: [], loading: false, error: null },
+    checkout: {
+      currentStep: 'result',
+      selectedProductId: null,
+      deliveryInfo: null,
+      cardTokenId: null,
+      acceptanceToken: null,
+      transactionResult: null,
+      isProcessing: false,
+      isPolling: false,
+      error: null,
+      ...overrides,
+    },
+    ui: { isModalOpen: false },
+  };
+
   return configureStore({
     reducer: {
       products: productsSlice.reducer,
       checkout: checkoutSlice.reducer,
       ui: uiSlice.reducer,
     },
-    preloadedState: {
-      products: { items: [], loading: false, error: null },
-      checkout: {
-        currentStep: 'result',
-        selectedProductId: null,
-        deliveryInfo: null,
-        cardTokenId: null,
-        acceptanceToken: null,
-        transactionResult: null,
-        isProcessing: false,
-        isPolling: false,
-        error: null,
-        ...overrides,
-      },
-      ui: { isModalOpen: false },
-    },
+    preloadedState,
   });
 }
 
@@ -148,7 +150,7 @@ describe('TransactionResultView', () => {
     const button = screen.getByRole('button', {
       name: /waiting for confirmation/i,
     });
-    expect(button).toBeDisabled();
+    expect((button as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('should display error message when error is present', () => {
