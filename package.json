@@ -1,7 +1,7 @@
 {
   "name": "eye-store",
   "private": true,
-  "packageManager": "pnpm@9",
+  "packageManager": "pnpm@9.0.0",
   "scripts": {
     "build:backend": "pnpm -F backend build",
     "start:backend": "pnpm -F backend start:prod",
