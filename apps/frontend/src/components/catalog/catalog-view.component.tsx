@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { ProductCard } from '@/components/product/product-card.component';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { loadProducts } from '@/store/slices/products.slice';
 import { selectProduct } from '@/store/slices/checkout.slice';
-import type { Product } from '@/types';
 
 export function CatalogView() {
   const dispatch = useAppDispatch();
@@ -15,9 +14,9 @@ export function CatalogView() {
     }
   }, [dispatch, products.length]);
 
-  function handleBuy(productId: string) {
+  const handleBuy = useCallback((productId: string) => {
     dispatch(selectProduct(productId));
-  }
+  }, [dispatch]);
 
   return (
     <div className='min-h-screen bg-transparent selection:bg-primary selection:text-white pb-24'>
@@ -85,11 +84,11 @@ export function CatalogView() {
 
         {!loading && !error && (
           <div className='grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-            {products.map((product: Product) => (
+            {products.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
-                onBuy={() => handleBuy(product.id)}
+                onBuy={handleBuy}
               />
             ))}
           </div>

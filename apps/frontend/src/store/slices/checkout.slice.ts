@@ -7,6 +7,7 @@ import type {
   CheckoutStep,
   DeliveryInfo,
   TransactionResult,
+  TransactionStatus,
 } from '@/types';
 import type { RootState } from '@/store';
 import {
@@ -16,7 +17,54 @@ import {
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 10;
-const FINAL_STATUSES = new Set(['APPROVED', 'DECLINED', 'VOIDED', 'ERROR']);
+const FINAL_STATUSES = new Set<TransactionStatus>([
+  'APPROVED',
+  'DECLINED',
+  'VOIDED',
+  'ERROR',
+]);
+const ABORT_ERROR_NAME = 'AbortError';
+
+function createAbortError(): Error {
+  const error = new Error('Polling aborted');
+  error.name = ABORT_ERROR_NAME;
+  return error;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === ABORT_ERROR_NAME;
+}
+
+function createPendingResult(transactionId: string): TransactionResult {
+  return {
+    id: transactionId,
+    status: 'PENDING',
+    reference: '',
+    amountInCents: 0,
+    productName: '',
+  };
+}
+
+async function waitForNextPoll(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    throw createAbortError();
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, POLL_INTERVAL_MS);
+
+    function onAbort() {
+      clearTimeout(timeoutId);
+      signal.removeEventListener('abort', onAbort);
+      reject(createAbortError());
+    }
+
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
 
 type CheckoutState = {
   currentStep: CheckoutStep;
@@ -87,38 +135,35 @@ export const processPayment = createAsyncThunk<
  */
 export const pollTransactionStatus = createAsyncThunk(
   'checkout/pollTransactionStatus',
-  async (transactionId: string): Promise<TransactionResult> => {
-    return new Promise((resolve) => {
-      let attempts = 0;
+  async (transactionId: string, { signal }): Promise<TransactionResult> => {
+    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+      await waitForNextPoll(signal);
 
-      const interval = setInterval(async () => {
-        attempts++;
-        try {
-          const result = await fetchTransactionStatus(transactionId);
-          if (FINAL_STATUSES.has(result.status)) {
-            clearInterval(interval);
-            resolve(result);
-            return;
-          }
-        } catch {
-          // swallow network errors and keep polling
+      try {
+        const result = await fetchTransactionStatus(transactionId, signal);
+        if (FINAL_STATUSES.has(result.status)) {
+          return result;
         }
+      } catch (error) {
+        if (signal.aborted || isAbortError(error)) {
+          throw error;
+        }
+        // Keep polling for transient errors.
+      }
+    }
 
-        if (attempts >= MAX_POLL_ATTEMPTS) {
-          clearInterval(interval);
-          // Resolve with the last fetched or an explicit PENDING result
-          resolve(
-            await fetchTransactionStatus(transactionId).catch(() => ({
-              id: transactionId,
-              status: 'PENDING' as const,
-              reference: '',
-              amountInCents: 0,
-              productName: '',
-            })),
-          );
-        }
-      }, POLL_INTERVAL_MS);
-    });
+    if (signal.aborted) {
+      throw createAbortError();
+    }
+
+    try {
+      return await fetchTransactionStatus(transactionId, signal);
+    } catch (error) {
+      if (signal.aborted || isAbortError(error)) {
+        throw error;
+      }
+      return createPendingResult(transactionId);
+    }
   },
 );
 

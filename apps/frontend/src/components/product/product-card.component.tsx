@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { GlassCard } from '../ui/glass-card';
 import { ProductImage } from './product-image.component';
 import { ProductInfo } from './product-info.component';
@@ -6,12 +7,12 @@ import type { Product } from '@/types';
 
 export type { Product };
 
-interface ProductCardProps {
+type ProductCardProps = {
   product: Product;
-  onBuy?: () => void;
-}
+  onBuy: (productId: string) => void;
+};
 
-export function ProductCard({ product, onBuy }: ProductCardProps) {
+function ProductCardComponent({ product, onBuy }: ProductCardProps) {
   const isOutOfStock = product.stock === 0;
 
   return (
@@ -28,9 +29,12 @@ export function ProductCard({ product, onBuy }: ProductCardProps) {
       />
       <AddToCartButton
         disabled={isOutOfStock}
-        onClick={onBuy}
+        onClick={() => onBuy(product.id)}
         label={isOutOfStock ? 'Out of Stock' : 'Pay with Credit Card'}
       />
     </GlassCard>
   );
 }
+
+export const ProductCard = memo(ProductCardComponent);
+ProductCard.displayName = 'ProductCard';

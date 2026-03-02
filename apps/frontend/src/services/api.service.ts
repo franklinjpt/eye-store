@@ -40,8 +40,9 @@ export async function createTransaction(
 
 export async function fetchTransactionStatus(
   id: string,
+  signal?: AbortSignal,
 ): Promise<TransactionResult> {
-  const response = await fetch(`${BASE_URL}/transactions/${id}`);
+  const response = await fetch(`${BASE_URL}/transactions/${id}`, { signal });
   if (!response.ok) {
     throw new Error('Failed to fetch transaction status');
   }
