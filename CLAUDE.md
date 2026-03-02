@@ -53,6 +53,7 @@ pnpm -F backend test:e2e    # E2E tests (uses test/jest-e2e.json config)
 ```
 
 Run a single backend test file:
+
 ```bash
 pnpm -F backend test -- --testPathPattern=app.controller
 ```
@@ -67,94 +68,71 @@ The backend follows **Hexagonal Architecture** (Ports & Adapters) organized by f
 
 ```
 src/
+├── main.ts
 ├── app.module.ts
-│
-├── products/                         # Feature module
-│   ├── products.module.ts
-│   │
-│   ├── domain/                       # Core business logic (no dependencies)
-│   │   ├── models/
-│   │   │   ├── product.ts            # Entity/aggregate root
-│   │   │   ├── lens-prescription.vo.ts  # Value object
-│   │   │   └── product-category.enum.ts
-│   │   ├── ports/
-│   │   │   ├── inbound/
-│   │   │   │   ├── create-product.use-case.ts    # Interface
-│   │   │   │   ├── get-product.use-case.ts
-│   │   │   │   └── search-products.use-case.ts
-│   │   │   └── outbound/
-│   │   │       ├── product-repository.port.ts     # Interface
-│   │   │       ├── inventory-service.port.ts
-│   │   │       └── pricing-service.port.ts
-│   │   └── services/
-│   │       └── product.service.ts    # Implements inbound ports (use cases)
-│   │
-│   ├── adapters/                     # Adapters (implement ports)
-│   │   ├── inbound/                  # Driving adapters
-│   │   │   └── http/
-│   │   │       ├── product.controller.ts
-│   │   │       ├── dto/
-│   │   │       │   ├── create-product.dto.ts
-│   │   │       │   └── product-response.dto.ts
-│   │   │       └── mappers/
-│   │   │           └── product-http.mapper.ts
-│   │   └── outbound/                 # Driven adapters
-│   │       ├── persistence/
-│   │       │   ├── product.repository.ts         # Implements repository port
-│   │       │   ├── entities/
-│   │       │   │   └── product.orm-entity.ts     # TypeORM entity
-│   │       │   └── mappers/
-│   │       │       └── product-persistence.mapper.ts
-│   │       └── external/
-│   │           └── inventory.adapter.ts          # Implements inventory port
-│   │
-│   └── __tests__/
-│       ├── domain/
-│       │   └── product.service.spec.ts
-│       └── adapters/
-│           └── product.controller.spec.ts
-│
-├── orders/                           # Another feature module
-│   ├── domain/
-│   ├── adapters/
-│   └── orders.module.ts
-│
-├── customers/
-│   ├── domain/
-│   ├── adapters/
-│   └── customers.module.ts
-│
-└── shared/                           # Cross-cutting concerns
+├── health/
+│   └── health.controller.ts
+└── products/
+    ├── products.module.ts
+    ├── products.tokens.ts
     ├── domain/
-    │   └── base.entity.ts
-    └── infrastructure/
-        ├── filters/
-        └── interceptors/
+    │   ├── models/
+    │   │   ├── product.ts
+    │   │   └── product-type.enum.ts
+    │   ├── ports/
+    │   │   ├── inbound/
+    │   │   │   ├── get-product-by-id.use-case.ts
+    │   │   │   └── get-products.use-case.ts
+    │   │   └── outbound/
+    │   │       └── product-repository.port.ts
+    │   └── services/
+    │       ├── get-product-by-id.service.ts
+    │       └── get-products.service.ts
+    ├── adapters/
+    │   ├── inbound/http/
+    │   │   ├── product.controller.ts
+    │   │   ├── dto/product-response.dto.ts
+    │   │   └── mappers/product-http.mapper.ts
+    │   └── outbound/persistence/
+    │       ├── product.repository.ts
+    │       ├── product-seed.service.ts
+    │       ├── entities/product.orm-entity.ts
+    │       └── mappers/product-persistence.mapper.ts
+    └── __tests__/
+        ├── adapters/product.controller.spec.ts
+        └── domain/
+            ├── get-product-by-id.service.spec.ts
+            └── get-products.service.spec.ts
+
+test/
+├── app.e2e-spec.ts
+└── jest-e2e.json
 ```
 
 **Feature Modules (API Resources):**
-- **Products / Stock** (`/api/stock`) — Product catalog and inventory management (GET, PATCH)
-- **Transactions** (`/api/transactions`) — WOMPI payment transactions (POST, GET)
-- **Customers** (`/api/customers`) — Customer registration and lookup (POST, GET, PUT)
-- **Deliveries** (`/api/deliveries`) — Shipping/delivery tracking (POST, GET, PATCH)
 
-Each resource must support the appropriate HTTP methods listed above. Use DTOs for request validation and response shaping.
+- **Health** (`/health`) — Liveness endpoint (GET)
+- **Products / Stock** (`/api/stock`) — Product catalog listing and details (GET, GET by `:id`)
+
+Use DTOs for request validation and response shaping. Additional resources like transactions/customers/deliveries can be added as new feature modules when implemented.
 
 **Database:** TypeORM with PostgreSQL. Domain models live in `domain/models/`. TypeORM ORM entities live in `adapters/outbound/persistence/entities/`. Persistence mappers translate between domain models and ORM entities.
 
-**Tests:** Jest with ts-jest. Unit tests in `__tests__/` within each feature module. E2E tests in `test/` at the app root using `supertest`.
+**Tests:** Jest with ts-jest. Unit tests are under `src/products/__tests__/`. E2E tests live in `test/` at the app root using `supertest`.
 
 ### Frontend (React + Vite + Tailwind)
 
 Entry point: `src/main.tsx` → `App.tsx`. Uses functional components with hooks.
 
 **State Management — Redux + Flux Architecture:**
+
 - Follow Flux unidirectional data flow: Action → Dispatcher → Store → View
 - Use Redux Toolkit with slices for each domain (cart, checkout, products, transactions)
 - Store payment transaction data in Redux state AND persist to `localStorage` for resilience
 - Never store raw credit card numbers in state or localStorage — only WOMPI tokenized references
 
 **Mobile-First Design:**
+
 - All layouts must be designed mobile-first, scaling up to desktop
 - Use Tailwind CSS responsive prefixes (`sm:`, `md:`, `lg:`) — base styles target mobile
 - Images must use lazy loading (`loading="lazy"`), `srcSet` for responsive sizes, and optimized formats (WebP with fallbacks)
@@ -162,6 +140,7 @@ Entry point: `src/main.tsx` → `App.tsx`. Uses functional components with hooks
 - Touch targets must be at least 44x44px
 
 **Session Resilience:**
+
 - Persist checkout state (current step, cart contents, form progress) to `localStorage` on every meaningful state change
 - On app load, rehydrate Redux store from `localStorage` to recover client progress
 - Clear persisted checkout data only after successful order completion (step 4 → step 5 transition)
