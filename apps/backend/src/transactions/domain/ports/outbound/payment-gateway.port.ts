@@ -15,4 +15,6 @@ export type PaymentResponse = {
 
 export interface PaymentGatewayPort {
   createPayment(request: PaymentRequest): Promise<PaymentResponse>;
+  // Fetches the live status of an existing Wompi transaction by its Wompi-side ID
+  getTransactionStatus(wompiTransactionId: string): Promise<string>;
 }

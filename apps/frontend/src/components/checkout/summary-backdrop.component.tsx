@@ -3,7 +3,11 @@ import { ShoppingBag, ArrowLeft, Loader2 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/Button';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { processPayment, goBackToPayment } from '@/store/slices/checkout.slice';
+import {
+  processPayment,
+  pollTransactionStatus,
+  goBackToPayment,
+} from '@/store/slices/checkout.slice';
 
 const BASE_FEE = 2000;
 const DELIVERY_FEE = 5000;
@@ -30,8 +34,14 @@ export function SummaryBackdrop() {
   const productPrice = product.price;
   const total = productPrice + BASE_FEE + DELIVERY_FEE;
 
-  function handlePayNow() {
-    dispatch(processPayment());
+  async function handlePayNow() {
+    const result = await dispatch(processPayment());
+    if (
+      processPayment.fulfilled.match(result) &&
+      result.payload.status === 'PENDING'
+    ) {
+      dispatch(pollTransactionStatus(result.payload.id));
+    }
   }
 
   function handleBack() {
@@ -46,7 +56,9 @@ export function SummaryBackdrop() {
             <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20'>
               <ShoppingBag className='h-5 w-5 text-primary' />
             </div>
-            <h2 className='font-heading text-xl font-medium text-white'>Order Summary</h2>
+            <h2 className='font-heading text-xl font-medium text-white'>
+              Order Summary
+            </h2>
           </div>
 
           {/* Product */}
@@ -58,10 +70,14 @@ export function SummaryBackdrop() {
               loading='lazy'
             />
             <div className='flex-1'>
-              <p className='font-heading font-medium text-white'>{product.name}</p>
+              <p className='font-heading font-medium text-white'>
+                {product.name}
+              </p>
               <p className='text-sm text-slate-400'>{product.sku}</p>
             </div>
-            <span className='font-sans font-bold text-accent'>{formatCOP(productPrice)}</span>
+            <span className='font-sans font-bold text-accent'>
+              {formatCOP(productPrice)}
+            </span>
           </div>
 
           {/* Fees breakdown */}
@@ -89,7 +105,9 @@ export function SummaryBackdrop() {
           <div className='rounded-xl border border-white/10 bg-white/5 p-4 text-sm'>
             <p className='mb-2 font-medium text-slate-300'>Deliver to:</p>
             <p className='text-white'>{deliveryInfo.fullName}</p>
-            <p className='text-slate-400'>{deliveryInfo.address}, {deliveryInfo.city}</p>
+            <p className='text-slate-400'>
+              {deliveryInfo.address}, {deliveryInfo.city}
+            </p>
             <p className='text-slate-400'>{deliveryInfo.email}</p>
             <p className='text-slate-400'>{deliveryInfo.phone}</p>
           </div>

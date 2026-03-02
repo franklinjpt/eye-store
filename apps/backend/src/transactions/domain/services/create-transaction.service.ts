@@ -1,6 +1,9 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { CreateTransactionUseCase, CreateTransactionCommand } from '../ports/inbound/create-transaction.use-case';
+import {
+  CreateTransactionUseCase,
+  CreateTransactionCommand,
+} from '../ports/inbound/create-transaction.use-case';
 import { TransactionRepositoryPort } from '../ports/outbound/transaction-repository.port';
 import { PaymentGatewayPort } from '../ports/outbound/payment-gateway.port';
 import { ProductRepositoryPort } from '../../../products/domain/ports/outbound/product-repository.port';
@@ -30,15 +33,18 @@ export class CreateTransactionService implements CreateTransactionUseCase {
     // Validate product exists and has stock
     const product = await this.productRepository.findById(command.productId);
     if (!product) {
-      throw new NotFoundException(`Product with id "${command.productId}" not found`);
+      throw new NotFoundException(
+        `Product with id "${command.productId}" not found`,
+      );
     }
     if (product.stock <= 0) {
       throw new Error('Product is out of stock');
     }
 
-    // Calculate total: product price (convert to cents) + base fee + delivery fee
-    const productPriceCents = Math.round(product.price * 100);
-    const totalAmountCents = productPriceCents + BASE_FEE_CENTS + DELIVERY_FEE_CENTS;
+    // Wompi CARD payments require whole pesos — round to nearest peso before converting to cents
+    const productPriceCents = Math.round(product.price) * 100;
+    const totalAmountCents =
+      productPriceCents + BASE_FEE_CENTS + DELIVERY_FEE_CENTS;
 
     // Generate unique reference
     const reference = `EYE-${randomUUID().slice(0, 8).toUpperCase()}`;
@@ -86,7 +92,8 @@ export class CreateTransactionService implements CreateTransactionUseCase {
       ERROR: TransactionStatus.ERROR,
       PENDING: TransactionStatus.PENDING,
     };
-    const mappedStatus = statusMap[paymentResponse.status] ?? TransactionStatus.ERROR;
+    const mappedStatus =
+      statusMap[paymentResponse.status] ?? TransactionStatus.ERROR;
 
     // Update transaction with result
     const updatedTransaction = await this.transactionRepository.updateStatus(

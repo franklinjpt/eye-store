@@ -18,3 +18,28 @@ export type WompiTransactionResponse = {
     status: string;
   };
 };
+
+// Full Wompi GET /transactions/:id response shape — includes error details for debugging
+export type WompiGetTransactionResponse = {
+  data: {
+    id: string;
+    status: string;
+    // Present when status is ERROR or DECLINED
+    payment_method?: {
+      type?: string;
+      extra?: {
+        decline_code?: string;
+        external_identifier?: string;
+        receipt_number?: string;
+        [key: string]: unknown;
+      };
+    };
+    error?: {
+      type?: string;
+      reason?: string;
+      [key: string]: unknown;
+    };
+    // Anything else Wompi sends
+    [key: string]: unknown;
+  };
+};

@@ -15,6 +15,7 @@ type PersistedCheckout = {
 type PersistedState = {
   checkout: PersistedCheckout & {
     isProcessing: boolean;
+    isPolling: boolean;
     error: string | null;
   };
 };
@@ -29,6 +30,7 @@ export function loadPersistedState(): PersistedState | undefined {
       checkout: {
         ...checkout,
         isProcessing: false,
+        isPolling: false,
         error: null,
       },
     };
@@ -41,36 +43,37 @@ export function clearPersistedState(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-export const localStorageMiddleware: Middleware = (store) => (next) => (action) => {
-  const result = next(action);
-  const state = store.getState() as { checkout: PersistedCheckout };
+export const localStorageMiddleware: Middleware =
+  (store) => (next) => (action) => {
+    const result = next(action);
+    const state = store.getState() as { checkout: PersistedCheckout };
 
-  // Clear on reset
-  if (
-    typeof action === 'object' &&
-    action !== null &&
-    'type' in action &&
-    action.type === 'checkout/resetCheckout'
-  ) {
-    clearPersistedState();
+    // Clear on reset
+    if (
+      typeof action === 'object' &&
+      action !== null &&
+      'type' in action &&
+      action.type === 'checkout/resetCheckout'
+    ) {
+      clearPersistedState();
+      return result;
+    }
+
+    // Persist checkout state (never raw card data)
+    const toStore: PersistedCheckout = {
+      currentStep: state.checkout.currentStep,
+      selectedProductId: state.checkout.selectedProductId,
+      deliveryInfo: state.checkout.deliveryInfo,
+      cardTokenId: state.checkout.cardTokenId,
+      acceptanceToken: state.checkout.acceptanceToken,
+      transactionResult: state.checkout.transactionResult,
+    };
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    } catch {
+      // localStorage full or unavailable — silently ignore
+    }
+
     return result;
-  }
-
-  // Persist checkout state (never raw card data)
-  const toStore: PersistedCheckout = {
-    currentStep: state.checkout.currentStep,
-    selectedProductId: state.checkout.selectedProductId,
-    deliveryInfo: state.checkout.deliveryInfo,
-    cardTokenId: state.checkout.cardTokenId,
-    acceptanceToken: state.checkout.acceptanceToken,
-    transactionResult: state.checkout.transactionResult,
   };
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
-  } catch {
-    // localStorage full or unavailable — silently ignore
-  }
-
-  return result;
-};

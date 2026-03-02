@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import {
@@ -6,10 +6,15 @@ import {
   PaymentRequest,
   PaymentResponse,
 } from '../../../domain/ports/outbound/payment-gateway.port';
-import { WompiTransactionRequest, WompiTransactionResponse } from './wompi.types';
+import {
+  WompiTransactionRequest,
+  WompiTransactionResponse,
+  WompiGetTransactionResponse,
+} from './wompi.types';
 
 @Injectable()
 export class WompiPaymentAdapter implements PaymentGatewayPort {
+  private readonly logger = new Logger(WompiPaymentAdapter.name);
   private readonly apiUrl: string;
   private readonly privateKey: string;
   private readonly integrityKey: string;
@@ -20,7 +25,11 @@ export class WompiPaymentAdapter implements PaymentGatewayPort {
     this.integrityKey = this.configService.get<string>('WOMPI_INTEGRITY_KEY');
   }
 
-  private generateSignature(reference: string, amountInCents: number, currency: string): string {
+  private generateSignature(
+    reference: string,
+    amountInCents: number,
+    currency: string,
+  ): string {
     // Wompi signature format: reference + amountInCents + currency + integrityKey
     const concatenated = `${reference}${amountInCents}${currency}${this.integrityKey}`;
     return createHash('sha256').update(concatenated).digest('hex');
@@ -47,6 +56,10 @@ export class WompiPaymentAdapter implements PaymentGatewayPort {
       signature,
     };
 
+    this.logger.log(
+      `[createPayment] Sending to Wompi — reference: ${request.reference}, amount: ${request.amountInCents} ${request.currency}`,
+    );
+
     const response = await fetch(`${this.apiUrl}/transactions`, {
       method: 'POST',
       headers: {
@@ -58,20 +71,64 @@ export class WompiPaymentAdapter implements PaymentGatewayPort {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('WOMPI API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorBody,
-        request: body,
-      });
+      this.logger.error(
+        `[createPayment] Wompi API error — status: ${response.status}, body: ${errorBody}`,
+      );
       throw new Error(`WOMPI payment failed: ${response.status} ${errorBody}`);
     }
 
     const result: WompiTransactionResponse = await response.json();
 
+    this.logger.log(
+      `[createPayment] Wompi response — wompiTransactionId: ${result.data.id}, status: ${result.data.status}`,
+    );
+
     return {
       transactionId: result.data.id,
       status: result.data.status,
     };
+  }
+
+  // Fetches the live status of an existing Wompi transaction.
+  // Called during polling when our DB still shows PENDING.
+  async getTransactionStatus(wompiTransactionId: string): Promise<string> {
+    this.logger.log(
+      `[getTransactionStatus] Fetching live status from Wompi for wompiTransactionId: ${wompiTransactionId}`,
+    );
+
+    const response = await fetch(
+      `${this.apiUrl}/transactions/${wompiTransactionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.privateKey}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      this.logger.error(
+        `[getTransactionStatus] Wompi API error — status: ${response.status}, body: ${errorBody}`,
+      );
+      throw new Error(
+        `Failed to fetch Wompi transaction status: ${response.status}`,
+      );
+    }
+
+    const result: WompiGetTransactionResponse = await response.json();
+    const { status } = result.data;
+
+    this.logger.log(
+      `[getTransactionStatus] Wompi live status for ${wompiTransactionId}: ${status}`,
+    );
+
+    // Log full details when the transaction is not successful so we can diagnose the cause
+    if (status === 'ERROR' || status === 'DECLINED') {
+      this.logger.warn(
+        `[getTransactionStatus] Non-successful status "${status}" — full Wompi response:\n${JSON.stringify(result.data, null, 2)}`,
+      );
+    }
+
+    return status;
   }
 }

@@ -30,8 +30,28 @@ export async function createTransaction(
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Payment failed' }));
+    const error = await response
+      .json()
+      .catch(() => ({ message: 'Payment failed' }));
     throw new Error(error.message ?? 'Payment failed');
   }
   return response.json();
+}
+
+export async function fetchTransactionStatus(
+  id: string,
+): Promise<TransactionResult> {
+  const response = await fetch(`${BASE_URL}/transactions/${id}`);
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => response.statusText);
+    console.error(
+      `[api] fetchTransactionStatus failed — id: ${id}, status: ${response.status}, body: ${errorText}`,
+    );
+    throw new Error('Failed to fetch transaction status');
+  }
+  const data: TransactionResult = await response.json();
+  console.log(
+    `[api] fetchTransactionStatus — id: ${id}, status: ${data.status}`,
+  );
+  return data;
 }
