@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { ProductCard, type Product } from './components/ProductCard';
+import { ProductCard, type Product } from './components/product/product-card.component';
 import { Input } from './components/ui/Input';
 
 const FAKE_PRODUCTS: Product[] = [

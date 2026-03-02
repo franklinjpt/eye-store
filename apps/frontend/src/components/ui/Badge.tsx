@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react';
-import { cn } from './Button';
+import { cn } from './cn';
 
 export interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'success' | 'warning' | 'error';
