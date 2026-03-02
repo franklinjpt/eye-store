@@ -1,10 +1,28 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ProductsModule } from './products/products.module';
+import { HealthController } from './health/health.controller';
+
+const useInMemory =
+  process.env.NODE_ENV === 'test' || process.env.SKIP_DB === 'true';
+
+const typeOrmImports = useInMemory
+  ? []
+  : [
+      TypeOrmModule.forRoot({
+        type: 'postgres',
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT, 10) || 5432,
+        username: process.env.DB_USERNAME || 'postgres',
+        password: process.env.DB_PASSWORD || 'postgres',
+        database: process.env.DB_NAME || 'eye_store',
+        autoLoadEntities: true,
+        synchronize: process.env.NODE_ENV !== 'production',
+      }),
+    ];
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [...typeOrmImports, ProductsModule],
+  controllers: [HealthController],
 })
 export class AppModule {}
