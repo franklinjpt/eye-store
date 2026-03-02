@@ -1,6 +1,4 @@
 import { useEffect } from 'react';
-import { Search } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
 import { ProductCard } from '@/components/product/product-card.component';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { loadProducts } from '@/store/slices/products.slice';
@@ -25,7 +23,7 @@ export function CatalogView() {
     <div className='min-h-screen bg-transparent selection:bg-primary selection:text-white pb-24'>
       {/* Header */}
       <header className='fixed top-0 z-40 w-full border-b border-white/10 bg-base/60 backdrop-blur-xl'>
-        <div className='mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-6 relative'>
+        <div className='mx-auto flex h-20 max-w-7xl items-center justify-start gap-4 px-6 relative'>
           <div className='flex items-center gap-3'>
             <div className='h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-[0_0_15px_var(--color-primary-glow)]'>
               <span className='font-heading font-bold text-white text-lg'>
@@ -36,38 +34,11 @@ export function CatalogView() {
               Bold<span className='text-accent'>Frames</span>
             </h1>
           </div>
-
-          <div className='hidden max-w-md flex-1 md:block relative'>
-            <div className='relative'>
-              <div className='absolute inset-y-0 left-0 flex items-center pl-4'>
-                <Search className='h-5 w-5 text-slate-400' />
-              </div>
-              <Input
-                type='search'
-                placeholder='Search collections...'
-                className='pl-12 rounded-full h-11 bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10 transition-all focus-visible:ring-primary'
-              />
-            </div>
-          </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className='mx-auto max-w-7xl px-6 pt-32'>
-        {/* Mobile Search */}
-        <div className='mb-8 md:hidden'>
-          <div className='relative'>
-            <div className='absolute inset-y-0 left-0 flex items-center pl-4'>
-              <Search className='h-5 w-5 text-slate-400' />
-            </div>
-            <Input
-              type='search'
-              placeholder='Search collections...'
-              className='pl-12 rounded-full h-11'
-            />
-          </div>
-        </div>
-
         {/* Hero Section */}
         <div className='mb-32 mt-12 flex flex-col items-center justify-center text-center relative max-w-4xl mx-auto'>
           <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/20 blur-[120px] rounded-full mix-blend-screen pointer-events-none' />

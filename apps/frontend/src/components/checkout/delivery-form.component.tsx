@@ -51,7 +51,7 @@ export function DeliveryForm({ onSubmit, onBack, initialValues }: DeliveryFormPr
   }
 
   return (
-    <GlassCard glow={false} className='w-full max-w-lg'>
+    <GlassCard glow={false} className='w-full max-w-lg p-4 sm:p-6'>
       <form onSubmit={handleSubmit} className='relative z-10 flex flex-col gap-5'>
         <h2 className='font-heading text-xl font-medium text-white'>Delivery Information</h2>
 
@@ -110,7 +110,7 @@ export function DeliveryForm({ onSubmit, onBack, initialValues }: DeliveryFormPr
           </div>
         </FormField>
 
-        <div className='grid grid-cols-2 gap-4'>
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <FormField label='City' htmlFor='delivery-city' error={errors.city}>
             <div className='relative'>
               <div className='absolute inset-y-0 left-0 flex items-center pl-3'>

@@ -1,9 +1,9 @@
-import { Modal } from '@/components/ui/modal';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PaymentFlowContent } from './payment-flow-content.component';
 import { useAppDispatch } from '@/store';
 import { resetCheckout } from '@/store/slices/checkout.slice';
 
-export function PaymentModal() {
+export function PaymentSheet() {
   const dispatch = useAppDispatch();
 
   function handleClose() {
@@ -11,8 +11,8 @@ export function PaymentModal() {
   }
 
   return (
-    <Modal isOpen onClose={handleClose}>
+    <BottomSheet isOpen onClose={handleClose}>
       <PaymentFlowContent onClose={handleClose} />
-    </Modal>
+    </BottomSheet>
   );
 }
