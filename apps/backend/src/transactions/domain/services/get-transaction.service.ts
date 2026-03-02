@@ -8,6 +8,8 @@ import {
   TRANSACTION_REPOSITORY_PORT,
   PAYMENT_GATEWAY_PORT,
 } from '../../transactions.tokens';
+import { ProductRepositoryPort } from '../../../products/domain/ports/outbound/product-repository.port';
+import { PRODUCT_REPOSITORY_PORT } from '../../../products/products.tokens';
 
 const FINAL_STATUSES = new Set([
   TransactionStatus.APPROVED,
@@ -25,6 +27,8 @@ export class GetTransactionService implements GetTransactionUseCase {
     private readonly transactionRepository: TransactionRepositoryPort,
     @Inject(PAYMENT_GATEWAY_PORT)
     private readonly paymentGateway: PaymentGatewayPort,
+    @Inject(PRODUCT_REPOSITORY_PORT)
+    private readonly productRepository: ProductRepositoryPort,
   ) {}
 
   async execute(id: string): Promise<Transaction> {
@@ -74,7 +78,17 @@ export class GetTransactionService implements GetTransactionUseCase {
         this.logger.log(
           `[execute] Updating DB status for ${id}: ${transaction.status} → ${mapped}`,
         );
-        return this.transactionRepository.updateStatus(id, mapped);
+        const updatedTransaction = await this.transactionRepository.updateStatus(id, mapped);
+        
+        // Decrement stock if status changed to APPROVED
+        if (mapped === TransactionStatus.APPROVED) {
+          this.logger.log(
+            `[execute] Decrementing stock for product ${transaction.productId}`,
+          );
+          await this.productRepository.decrementStock(transaction.productId, 1);
+        }
+        
+        return updatedTransaction;
       }
     }
 
