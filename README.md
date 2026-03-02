@@ -3,11 +3,13 @@
 Eye Store is a fullstack checkout application for eyewear and eye-care products (frames, lenses, accessories), with card payments processed through WOMPI.
 
 It is a pnpm monorepo with:
+
 - `apps/frontend`: React 19 + Vite 7 SPA
 - `apps/backend`: NestJS 10 API with TypeORM + PostgreSQL
 - `packages/shared`: shared constants (checkout fees)
 
 ## Table of Contents
+
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Data Model](#data-model)
@@ -23,14 +25,14 @@ It is a pnpm monorepo with:
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, Vite 7, TypeScript, Redux Toolkit, Tailwind CSS 4, Vitest |
-| Backend | NestJS 10 (TypeScript), Hexagonal Architecture, Railway-Oriented `Result` pattern |
-| Database | PostgreSQL |
-| ORM | TypeORM |
-| Shared Package | pnpm workspace package (`@eye-store/shared`) |
-| Package Manager | pnpm workspaces |
+| Layer           | Technology                                                                        |
+| --------------- | --------------------------------------------------------------------------------- |
+| Frontend        | React 19, Vite 7, TypeScript, Redux Toolkit, Tailwind CSS 4, Vitest               |
+| Backend         | NestJS 10 (TypeScript), Hexagonal Architecture, Railway-Oriented `Result` pattern |
+| Database        | PostgreSQL                                                                        |
+| ORM             | TypeORM                                                                           |
+| Shared Package  | pnpm workspace package (`@eye-store/shared`)                                      |
+| Package Manager | pnpm workspaces                                                                   |
 
 ---
 
@@ -142,19 +144,15 @@ Customer and delivery data are stored as columns on `transactions` (not separate
 
 ---
 
-## API Documentation
-
-Swagger is not configured in this repository yet.
-
 ### Endpoints Summary
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/health` | Liveness check |
-| GET | `/api/stock` | List catalog products |
-| GET | `/api/stock/:id` | Get product detail |
-| POST | `/api/transactions` | Create and process payment transaction |
-| GET | `/api/transactions/:id` | Get transaction view and live status progression |
+| Method | Endpoint                | Description                                      |
+| ------ | ----------------------- | ------------------------------------------------ |
+| GET    | `/health`               | Liveness check                                   |
+| GET    | `/api/stock`            | List catalog products                            |
+| GET    | `/api/stock/:id`        | Get product detail                               |
+| POST   | `/api/transactions`     | Create and process payment transaction           |
+| GET    | `/api/transactions/:id` | Get transaction view and live status progression |
 
 ### Example: Create Transaction
 
@@ -195,6 +193,7 @@ Business flow implemented in the SPA:
 `1) Catalog -> 2) Card + Delivery -> 3) Summary -> 4) Result -> 5) Back to Catalog`
 
 Resilience behavior:
+
 - Checkout step and form progress are persisted in `localStorage` under `eye-store-checkout`.
 - Persisted data includes product selection, delivery info, tokens, and transaction result.
 - Raw card number/CVV are never persisted; card data is tokenized directly against WOMPI.
@@ -204,6 +203,7 @@ Resilience behavior:
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 20+
 - pnpm 9+
 - PostgreSQL 14+
@@ -237,6 +237,7 @@ pnpm -F backend reseed:products
 ## Environment Variables
 
 Create/update:
+
 - `apps/backend/.env`
 - `apps/frontend/.env`
 
@@ -297,14 +298,7 @@ Coverage target for this project is at least 80% (frontend and backend).
 
 ## Deployment
 
-Deployment infra is not defined in this repository yet (no IaC or deployment manifests committed at root).
-
-Recommended production split:
-- Frontend: static hosting + CDN
-- Backend: containerized NestJS service
-- Database: managed PostgreSQL
-
----
+The App is deployed on Render at: https://eye-store-frontend.onrender.com/
 
 ## Security Notes
 
