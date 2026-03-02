@@ -65,9 +65,9 @@ const ACCESSORY_STYLES = [
 ];
 
 const TYPE_PRICE_RANGES: Record<ProductType, { min: number; max: number }> = {
-  [ProductType.FRAME]: { min: 89, max: 249 },
-  [ProductType.LENS]: { min: 49, max: 179 },
-  [ProductType.ACCESSORY]: { min: 8, max: 32 },
+  [ProductType.FRAME]: { min: 89000, max: 249000 },
+  [ProductType.LENS]: { min: 49000, max: 179000 },
+  [ProductType.ACCESSORY]: { min: 8000, max: 32000 },
 };
 
 function pickRandom<T>(items: T[]): T {
@@ -90,7 +90,7 @@ function generateRandomName(type: ProductType): string {
 function generateRandomPrice(type: ProductType): number {
   const range = TYPE_PRICE_RANGES[type];
   const price = Math.random() * (range.max - range.min) + range.min;
-  return Number(price.toFixed(2));
+  return Math.round(price);
 }
 
 function generateRandomImage(type: ProductType): string {
@@ -109,13 +109,13 @@ function generateRandomImage(type: ProductType): string {
 function generateRandomStock(type: ProductType): number {
   switch (type) {
     case ProductType.FRAME:
-      return Math.floor(Math.random() * 60) + 20;
+      return Math.floor(Math.random() * 25) + 1;
     case ProductType.LENS:
-      return Math.floor(Math.random() * 80) + 30;
+      return Math.floor(Math.random() * 25) + 1;
     case ProductType.ACCESSORY:
-      return Math.floor(Math.random() * 120) + 40;
+      return Math.floor(Math.random() * 25) + 1;
     default:
-      return 20;
+      return 1;
   }
 }
 

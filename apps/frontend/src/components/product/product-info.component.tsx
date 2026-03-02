@@ -7,6 +7,14 @@ export interface ProductInfoProps {
   className?: string;
 }
 
+function formatCOP(amount: number): string {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  }).format(amount);
+}
+
 export function ProductInfo({ name, price, description, className }: ProductInfoProps) {
   return (
     <div className={cn('relative z-10 flex flex-1 flex-col', className)}>
@@ -15,7 +23,7 @@ export function ProductInfo({ name, price, description, className }: ProductInfo
           {name}
         </h3>
         <span className='font-sans text-lg font-bold text-accent'>
-          ${price.toFixed(2)}
+          {formatCOP(price)}
         </span>
       </div>
       <p className='mb-6 flex-1 text-sm text-slate-300 line-clamp-3'>
