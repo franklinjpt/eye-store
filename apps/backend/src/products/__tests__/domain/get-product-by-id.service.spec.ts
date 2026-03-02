@@ -12,6 +12,7 @@ const mockProduct: Product = {
   description: 'A test frame',
   type: ProductType.FRAME,
   stock: 10,
+  position: 1,
   sku: 'FRM-TST-001',
   image: 'https://example.com/frame.jpg',
 };

@@ -10,6 +10,7 @@ export class ProductHttpMapper {
     dto.description = product.description;
     dto.type = product.type;
     dto.stock = product.stock;
+    dto.position = product.position;
     dto.sku = product.sku;
     dto.image = product.image;
     return dto;

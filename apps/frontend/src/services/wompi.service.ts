@@ -32,8 +32,6 @@ export async function tokenizeCard(card: CardData): Promise<string> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Tokenization failed:', errorText);
     throw new Error(`Failed to tokenize card: ${response.status}`);
   }
 

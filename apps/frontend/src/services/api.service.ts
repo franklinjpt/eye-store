@@ -43,15 +43,7 @@ export async function fetchTransactionStatus(
 ): Promise<TransactionResult> {
   const response = await fetch(`${BASE_URL}/transactions/${id}`);
   if (!response.ok) {
-    const errorText = await response.text().catch(() => response.statusText);
-    console.error(
-      `[api] fetchTransactionStatus failed — id: ${id}, status: ${response.status}, body: ${errorText}`,
-    );
     throw new Error('Failed to fetch transaction status');
   }
-  const data: TransactionResult = await response.json();
-  console.log(
-    `[api] fetchTransactionStatus — id: ${id}, status: ${data.status}`,
-  );
-  return data;
+  return response.json();
 }

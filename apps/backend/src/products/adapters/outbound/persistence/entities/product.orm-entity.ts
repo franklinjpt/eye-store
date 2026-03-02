@@ -21,6 +21,9 @@ export class ProductOrmEntity {
   @Column({ type: 'int' })
   stock: number;
 
+  @Column({ type: 'int', default: 0 })
+  position: number;
+
   @Column({ type: 'varchar', length: 100, unique: true })
   sku: string;
 

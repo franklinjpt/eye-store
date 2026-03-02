@@ -7,6 +7,7 @@ export type Product = {
   description: string;
   type: ProductType;
   stock: number;
+  position: number;
   sku: string;
   image: string;
 };

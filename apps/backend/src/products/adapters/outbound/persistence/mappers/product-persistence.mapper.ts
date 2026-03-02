@@ -10,6 +10,7 @@ export class ProductPersistenceMapper {
       description: entity.description,
       type: entity.type,
       stock: entity.stock,
+      position: entity.position,
       sku: entity.sku,
       image: entity.image,
     };
@@ -22,6 +23,7 @@ export class ProductPersistenceMapper {
       description: product.description,
       type: product.type,
       stock: product.stock,
+      position: product.position,
       sku: product.sku,
       image: product.image,
     };

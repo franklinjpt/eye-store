@@ -14,7 +14,9 @@ export class ProductRepository implements ProductRepositoryPort {
   ) {}
 
   async findAll(): Promise<Product[]> {
-    const entities = await this.ormRepository.find();
+    const entities = await this.ormRepository.find({
+      order: { position: 'ASC', sku: 'ASC' },
+    });
     return entities.map(ProductPersistenceMapper.toDomain);
   }
 

@@ -98,32 +98,16 @@ export const pollTransactionStatus = createAsyncThunk(
         attempts++;
         try {
           const result = await fetchTransactionStatus(transactionId);
-          console.log(
-            `[poll attempt ${attempts}] transactionId: ${transactionId} — status: ${result.status}`,
-          );
           if (FINAL_STATUSES.has(result.status)) {
-            console.log(
-              `[poll] Final status reached: ${result.status}. Stopping.`,
-            );
             clearInterval(interval);
             resolve(result);
             return;
           }
-          console.log(
-            `[poll] Status is still PENDING, will retry (attempt ${attempts}/${MAX_POLL_ATTEMPTS})`,
-          );
-        } catch (err) {
-          console.warn(
-            `[poll attempt ${attempts}] Network error fetching transaction status:`,
-            err,
-          );
+        } catch {
           // swallow network errors and keep polling
         }
 
         if (attempts >= MAX_POLL_ATTEMPTS) {
-          console.warn(
-            `[poll] Max attempts (${MAX_POLL_ATTEMPTS}) reached for ${transactionId}. Stopping with last known status.`,
-          );
           clearInterval(interval);
           // Resolve with the last fetched or an explicit PENDING result
           resolve(

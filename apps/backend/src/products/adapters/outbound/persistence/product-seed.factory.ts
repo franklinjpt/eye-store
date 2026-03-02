@@ -2,6 +2,7 @@ import { Product } from '../../../domain/models/product';
 import { ProductType } from '../../../domain/models/product-type.enum';
 
 export const SEED_PRODUCT_COUNT = 25;
+const OUT_OF_STOCK_SEQUENCE_INDEXES = new Set([1, 2]);
 
 const PRODUCT_TYPES: ProductType[] = [
   ProductType.FRAME,
@@ -72,6 +73,15 @@ const TYPE_PRICE_RANGES: Record<ProductType, { min: number; max: number }> = {
 
 function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function shuffle<TData>(items: TData[]): TData[] {
+  const copy = [...items];
+  for (let idx = copy.length - 1; idx > 0; idx -= 1) {
+    const randomIndex = Math.floor(Math.random() * (idx + 1));
+    [copy[idx], copy[randomIndex]] = [copy[randomIndex], copy[idx]];
+  }
+  return copy;
 }
 
 function generateRandomName(type: ProductType): string {
@@ -146,15 +156,24 @@ export function generateSeedProducts(
   count: number,
   startIndex = 1,
 ): Omit<Product, 'id'>[] {
+  const randomPositions = shuffle(
+    Array.from({ length: count }, (_, idx) => startIndex + idx),
+  );
+
   return Array.from({ length: count }, (_, idx) => {
     const sequenceIndex = startIndex + idx;
     const type = PRODUCT_TYPES[(sequenceIndex - 1) % PRODUCT_TYPES.length];
+    const stock = OUT_OF_STOCK_SEQUENCE_INDEXES.has(sequenceIndex)
+      ? 0
+      : generateRandomStock(type);
+
     return {
       name: generateRandomName(type),
       price: generateRandomPrice(type),
       description: generateDescription(type),
       type,
-      stock: generateRandomStock(type),
+      stock,
+      position: randomPositions[idx],
       sku: generateSku(type, sequenceIndex),
       image: generateRandomImage(type),
     };
