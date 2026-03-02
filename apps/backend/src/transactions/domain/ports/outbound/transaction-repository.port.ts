@@ -11,4 +11,9 @@ export interface TransactionRepositoryPort {
     status: TransactionStatus,
     wompiTransactionId?: string,
   ): Promise<Transaction>;
+  updateStatusFromPending(
+    id: string,
+    status: TransactionStatus,
+    wompiTransactionId?: string,
+  ): Promise<Transaction | null>;
 }

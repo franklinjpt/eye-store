@@ -46,16 +46,22 @@ describe('GetProductByIdService', () => {
 
     const result = await service.execute('1');
 
-    expect(result).toEqual(mockProduct);
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.value).toEqual(mockProduct);
+    }
     expect(repository.findById).toHaveBeenCalledWith('1');
   });
 
-  it('should return null when product not found', async () => {
+  it('should return PRODUCT_NOT_FOUND when product does not exist', async () => {
     repository.findById.mockResolvedValue(null);
 
     const result = await service.execute('non-existent');
 
-    expect(result).toBeNull();
+    expect(result.kind).toBe('err');
+    if (result.kind === 'err') {
+      expect(result.error.code).toBe('PRODUCT_NOT_FOUND');
+    }
     expect(repository.findById).toHaveBeenCalledWith('non-existent');
   });
 });

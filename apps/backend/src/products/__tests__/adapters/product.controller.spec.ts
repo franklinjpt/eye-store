@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 import { ProductController } from '../../adapters/inbound/http/product.controller';
 import { GetProductsUseCase } from '../../domain/ports/inbound/get-products.use-case';
 import { GetProductByIdUseCase } from '../../domain/ports/inbound/get-product-by-id.use-case';
+import { err, ok } from '../../../common/result';
+import { productNotFoundFailure } from '../../domain/errors/product.failure';
 import {
   GET_PRODUCTS_USE_CASE,
   GET_PRODUCT_BY_ID_USE_CASE,
@@ -50,7 +52,7 @@ describe('ProductController', () => {
 
   describe('GET /api/stock', () => {
     it('should return all products', async () => {
-      getProductsUseCase.execute.mockResolvedValue([mockProduct]);
+      getProductsUseCase.execute.mockResolvedValue(ok([mockProduct]));
 
       const result = await controller.findAll();
 
@@ -62,7 +64,7 @@ describe('ProductController', () => {
 
   describe('GET /api/stock/:id', () => {
     it('should return product when found', async () => {
-      getProductByIdUseCase.execute.mockResolvedValue(mockProduct);
+      getProductByIdUseCase.execute.mockResolvedValue(ok(mockProduct));
 
       const result = await controller.findById('1');
 
@@ -70,12 +72,18 @@ describe('ProductController', () => {
       expect(result.name).toBe(mockProduct.name);
     });
 
-    it('should throw NotFoundException when product not found', async () => {
-      getProductByIdUseCase.execute.mockResolvedValue(null);
-
-      await expect(controller.findById('non-existent')).rejects.toThrow(
-        NotFoundException,
+    it('should throw HttpException with 404 when product not found', async () => {
+      getProductByIdUseCase.execute.mockResolvedValue(
+        err(productNotFoundFailure('non-existent')),
       );
+
+      try {
+        await controller.findById('non-existent');
+        fail('Expected controller to throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect((error as HttpException).getStatus()).toBe(404);
+      }
     });
   });
 });

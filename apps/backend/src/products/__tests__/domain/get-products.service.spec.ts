@@ -59,7 +59,10 @@ describe('GetProductsService', () => {
 
     const result = await service.execute();
 
-    expect(result).toEqual(mockProducts);
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.value).toEqual(mockProducts);
+    }
     expect(repository.findAll).toHaveBeenCalledTimes(1);
   });
 
@@ -68,7 +71,10 @@ describe('GetProductsService', () => {
 
     const result = await service.execute();
 
-    expect(result).toEqual([]);
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.value).toEqual([]);
+    }
     expect(repository.findAll).toHaveBeenCalledTimes(1);
   });
 });

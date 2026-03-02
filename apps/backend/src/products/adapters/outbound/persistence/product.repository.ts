@@ -42,8 +42,9 @@ export class ProductRepository implements ProductRepositoryPort {
     const result = await this.ormRepository
       .createQueryBuilder()
       .update()
-      .set({ stock: () => `stock - ${quantity}` })
-      .where('id = :id AND stock >= :quantity', { id: productId, quantity })
+      .set({ stock: () => 'stock - :qty' })
+      .where('id = :id AND stock >= :qty', { id: productId })
+      .setParameter('qty', quantity)
       .execute();
 
     if (result.affected === 0) {

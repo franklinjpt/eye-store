@@ -1,8 +1,9 @@
 import {
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   Inject,
-  NotFoundException,
   Param,
 } from '@nestjs/common';
 import { GetProductsUseCase } from '../../../domain/ports/inbound/get-products.use-case';
@@ -13,6 +14,7 @@ import {
 } from '../../../products.tokens';
 import { ProductHttpMapper } from './mappers/product-http.mapper';
 import { ProductResponseDto } from './dto/product-response.dto';
+import { ProductFailure } from '../../../domain/errors/product.failure';
 
 @Controller('api/stock')
 export class ProductController {
@@ -25,16 +27,32 @@ export class ProductController {
 
   @Get()
   async findAll(): Promise<ProductResponseDto[]> {
-    const products = await this.getProductsUseCase.execute();
-    return products.map(ProductHttpMapper.toResponse);
+    const result = await this.getProductsUseCase.execute();
+    if (result.kind === 'err') {
+      throw new HttpException(
+        'Unexpected product failure',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    return result.value.map(ProductHttpMapper.toResponse);
   }
 
   @Get(':id')
   async findById(@Param('id') id: string): Promise<ProductResponseDto> {
-    const product = await this.getProductByIdUseCase.execute(id);
-    if (!product) {
-      throw new NotFoundException(`Product with id "${id}" not found`);
+    const result = await this.getProductByIdUseCase.execute(id);
+    if (result.kind === 'err') {
+      throw this.mapFailureToHttpException(result.error);
     }
-    return ProductHttpMapper.toResponse(product);
+
+    return ProductHttpMapper.toResponse(result.value);
+  }
+
+  private mapFailureToHttpException(failure: ProductFailure): HttpException {
+    if (failure.code === 'PRODUCT_NOT_FOUND') {
+      return new HttpException(failure.message, HttpStatus.NOT_FOUND);
+    }
+
+    return new HttpException('Unexpected product failure', HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }

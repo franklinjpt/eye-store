@@ -3,6 +3,7 @@ import { Product } from '../models/product';
 import { GetProductsUseCase } from '../ports/inbound/get-products.use-case';
 import { ProductRepositoryPort } from '../ports/outbound/product-repository.port';
 import { PRODUCT_REPOSITORY_PORT } from '../../products.tokens';
+import { ok, Result } from '../../../common/result';
 
 @Injectable()
 export class GetProductsService implements GetProductsUseCase {
@@ -11,7 +12,7 @@ export class GetProductsService implements GetProductsUseCase {
     private readonly productRepository: ProductRepositoryPort,
   ) {}
 
-  async execute(): Promise<Product[]> {
-    return this.productRepository.findAll();
+  async execute(): Promise<Result<Product[], never>> {
+    return ok(await this.productRepository.findAll());
   }
 }

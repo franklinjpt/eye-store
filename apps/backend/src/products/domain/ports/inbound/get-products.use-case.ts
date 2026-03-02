@@ -1,5 +1,6 @@
 import { Product } from '../../models/product';
+import { Result } from '../../../../common/result';
 
 export interface GetProductsUseCase {
-  execute(): Promise<Product[]>;
+  execute(): Promise<Result<Product[], never>>;
 }

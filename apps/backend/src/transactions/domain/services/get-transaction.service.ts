@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { GetTransactionUseCase } from '../ports/inbound/get-transaction.use-case';
 import { TransactionRepositoryPort } from '../ports/outbound/transaction-repository.port';
 import { PaymentGatewayPort } from '../ports/outbound/payment-gateway.port';
@@ -10,6 +10,14 @@ import {
 } from '../../transactions.tokens';
 import { ProductRepositoryPort } from '../../../products/domain/ports/outbound/product-repository.port';
 import { PRODUCT_REPOSITORY_PORT } from '../../../products/products.tokens';
+import { err, ok, Result } from '../../../common/result';
+import {
+  stockUpdateFailedFailure,
+  TransactionFailure,
+  transactionNotFoundFailure,
+  transactionPersistenceFailure,
+} from '../errors/transaction.failure';
+import { WompiStatusMapper } from '../mappers/wompi-status.mapper';
 
 const FINAL_STATUSES = new Set([
   TransactionStatus.APPROVED,
@@ -31,10 +39,10 @@ export class GetTransactionService implements GetTransactionUseCase {
     private readonly productRepository: ProductRepositoryPort,
   ) {}
 
-  async execute(id: string): Promise<Transaction> {
+  async execute(id: string): Promise<Result<Transaction, TransactionFailure>> {
     const transaction = await this.transactionRepository.findById(id);
     if (!transaction) {
-      throw new NotFoundException(`Transaction with id "${id}" not found`);
+      return err(transactionNotFoundFailure(id));
     }
 
     this.logger.log(
@@ -57,7 +65,7 @@ export class GetTransactionService implements GetTransactionUseCase {
         this.logger.warn(
           `[execute] Failed to fetch live Wompi status for ${transaction.wompiTransactionId}: ${err}`,
         );
-        return transaction;
+        return ok(transaction);
       }
 
       this.logger.log(
@@ -65,34 +73,49 @@ export class GetTransactionService implements GetTransactionUseCase {
       );
 
       // Only update the DB if Wompi has moved to a final status
-      const statusMap: Record<string, TransactionStatus> = {
-        APPROVED: TransactionStatus.APPROVED,
-        DECLINED: TransactionStatus.DECLINED,
-        VOIDED: TransactionStatus.VOIDED,
-        ERROR: TransactionStatus.ERROR,
-        PENDING: TransactionStatus.PENDING,
-      };
-      const mapped = statusMap[wompiStatus] ?? TransactionStatus.ERROR;
+      const mapped = WompiStatusMapper.toDomain(wompiStatus);
 
       if (FINAL_STATUSES.has(mapped)) {
         this.logger.log(
           `[execute] Updating DB status for ${id}: ${transaction.status} → ${mapped}`,
         );
-        const updatedTransaction =
-          await this.transactionRepository.updateStatus(id, mapped);
+        let updatedTransaction: Transaction;
+        try {
+          const transitionResult =
+            await this.transactionRepository.updateStatusFromPending(
+              id,
+              mapped,
+            );
 
-        // Decrement stock if status changed to APPROVED
+          if (!transitionResult) {
+            const latestTransaction = await this.transactionRepository.findById(id);
+            if (!latestTransaction) {
+              return err(transactionNotFoundFailure(id));
+            }
+            return ok(latestTransaction);
+          }
+
+          updatedTransaction = transitionResult;
+        } catch {
+          return err(transactionPersistenceFailure('update transaction status'));
+        }
+
+        // Decrement stock only if this request moved status from PENDING to APPROVED
         if (mapped === TransactionStatus.APPROVED) {
           this.logger.log(
             `[execute] Decrementing stock for product ${transaction.productId}`,
           );
-          await this.productRepository.decrementStock(transaction.productId, 1);
+          try {
+            await this.productRepository.decrementStock(transaction.productId, 1);
+          } catch {
+            return err(stockUpdateFailedFailure(transaction.productId));
+          }
         }
 
-        return updatedTransaction;
+        return ok(updatedTransaction);
       }
     }
 
-    return transaction;
+    return ok(transaction);
   }
 }

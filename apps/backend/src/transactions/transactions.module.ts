@@ -7,12 +7,16 @@ import { TransactionOrmEntity } from './adapters/outbound/persistence/entities/t
 import { WompiPaymentAdapter } from './adapters/outbound/wompi/wompi-payment.adapter';
 import { CreateTransactionService } from './domain/services/create-transaction.service';
 import { GetTransactionService } from './domain/services/get-transaction.service';
+import { CreateTransactionViewService } from './domain/services/create-transaction-view.service';
+import { GetTransactionViewService } from './domain/services/get-transaction-view.service';
 import { ProductsModule } from '../products/products.module';
 import {
   TRANSACTION_REPOSITORY_PORT,
   PAYMENT_GATEWAY_PORT,
   CREATE_TRANSACTION_USE_CASE,
   GET_TRANSACTION_USE_CASE,
+  CREATE_TRANSACTION_VIEW_USE_CASE,
+  GET_TRANSACTION_VIEW_USE_CASE,
 } from './transactions.tokens';
 
 @Module({
@@ -42,6 +46,16 @@ import {
     {
       provide: GET_TRANSACTION_USE_CASE,
       useExisting: GetTransactionService,
+    },
+    CreateTransactionViewService,
+    {
+      provide: CREATE_TRANSACTION_VIEW_USE_CASE,
+      useExisting: CreateTransactionViewService,
+    },
+    GetTransactionViewService,
+    {
+      provide: GET_TRANSACTION_VIEW_USE_CASE,
+      useExisting: GetTransactionViewService,
     },
   ],
 })

@@ -41,4 +41,32 @@ export class TransactionRepository implements TransactionRepositoryPort {
     const updated = await this.ormRepository.findOneOrFail({ where: { id } });
     return TransactionPersistenceMapper.toDomain(updated);
   }
+
+  async updateStatusFromPending(
+    id: string,
+    status: TransactionStatus,
+    wompiTransactionId?: string,
+  ): Promise<Transaction | null> {
+    const updateData: Partial<TransactionOrmEntity> = { status };
+    if (wompiTransactionId) {
+      updateData.wompiTransactionId = wompiTransactionId;
+    }
+
+    const updateResult = await this.ormRepository
+      .createQueryBuilder()
+      .update(TransactionOrmEntity)
+      .set(updateData)
+      .where('id = :id AND status = :pendingStatus', {
+        id,
+        pendingStatus: TransactionStatus.PENDING,
+      })
+      .execute();
+
+    if (updateResult.affected === 0) {
+      return null;
+    }
+
+    const updated = await this.ormRepository.findOneOrFail({ where: { id } });
+    return TransactionPersistenceMapper.toDomain(updated);
+  }
 }

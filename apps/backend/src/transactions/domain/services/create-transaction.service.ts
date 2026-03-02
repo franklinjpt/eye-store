@@ -1,12 +1,13 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
-  CreateTransactionUseCase,
   CreateTransactionCommand,
+  CreateTransactionUseCase,
 } from '../ports/inbound/create-transaction.use-case';
 import { TransactionRepositoryPort } from '../ports/outbound/transaction-repository.port';
 import { PaymentGatewayPort } from '../ports/outbound/payment-gateway.port';
 import { ProductRepositoryPort } from '../../../products/domain/ports/outbound/product-repository.port';
+import { Product } from '../../../products/domain/models/product';
 import { Transaction } from '../models/transaction';
 import { TransactionStatus } from '../models/transaction-status.enum';
 import {
@@ -14,9 +15,43 @@ import {
   PAYMENT_GATEWAY_PORT,
 } from '../../transactions.tokens';
 import { PRODUCT_REPOSITORY_PORT } from '../../../products/products.tokens';
+import { flatMapAsync, ok, Result, err } from '../../../common/result';
+import {
+  outOfStockFailure,
+  paymentGatewayFailure,
+  productNotFoundFailure,
+  stockUpdateFailedFailure,
+  TransactionFailure,
+  transactionNotFoundFailure,
+  transactionPersistenceFailure,
+} from '../errors/transaction.failure';
+import { WompiStatusMapper } from '../mappers/wompi-status.mapper';
 
 const BASE_FEE_CENTS = 200000; // $2,000 COP
 const DELIVERY_FEE_CENTS = 500000; // $5,000 COP
+
+type PreparedTransaction = {
+  product: Product;
+  totalAmountCents: number;
+  reference: string;
+};
+
+type PendingTransactionContext = {
+  pendingTransaction: Transaction;
+  totalAmountCents: number;
+  reference: string;
+};
+
+type ProcessedPaymentContext = {
+  pendingTransaction: Transaction;
+  mappedStatus: TransactionStatus;
+  wompiTransactionId: string;
+};
+
+type FinalizedTransactionContext = {
+  transaction: Transaction;
+  shouldDecrementStock: boolean;
+};
 
 @Injectable()
 export class CreateTransactionService implements CreateTransactionUseCase {
@@ -29,16 +64,33 @@ export class CreateTransactionService implements CreateTransactionUseCase {
     private readonly productRepository: ProductRepositoryPort,
   ) {}
 
-  async execute(command: CreateTransactionCommand): Promise<Transaction> {
-    // Validate product exists and has stock
+  async execute(
+    command: CreateTransactionCommand,
+  ): Promise<Result<Transaction, TransactionFailure>> {
+    return flatMapAsync(
+      flatMapAsync(
+        flatMapAsync(
+          flatMapAsync(
+            this.validateAndPrepare(command),
+            (prepared) => this.createPendingTransaction(prepared, command),
+          ),
+          (pendingContext) => this.processPayment(pendingContext, command),
+        ),
+        (processedPayment) => this.finalizeTransaction(processedPayment),
+      ),
+      (finalizedContext) => this.decrementStockIfApproved(finalizedContext),
+    );
+  }
+
+  private async validateAndPrepare(
+    command: CreateTransactionCommand,
+  ): Promise<Result<PreparedTransaction, TransactionFailure>> {
     const product = await this.productRepository.findById(command.productId);
     if (!product) {
-      throw new NotFoundException(
-        `Product with id "${command.productId}" not found`,
-      );
+      return err(productNotFoundFailure(command.productId));
     }
     if (product.stock <= 0) {
-      throw new Error('Product is out of stock');
+      return err(outOfStockFailure(command.productId));
     }
 
     // Wompi CARD payments require whole pesos — round to nearest peso before converting to cents
@@ -49,64 +101,133 @@ export class CreateTransactionService implements CreateTransactionUseCase {
     // Generate unique reference
     const reference = `EYE-${randomUUID().slice(0, 8).toUpperCase()}`;
 
-    // Create PENDING transaction in DB
-    const pendingTransaction = await this.transactionRepository.save({
-      productId: command.productId,
-      amountInCents: totalAmountCents,
-      currency: 'COP',
-      status: TransactionStatus.PENDING,
-      wompiTransactionId: null,
+    return ok({
+      product,
+      totalAmountCents,
       reference,
-      customerName: command.customerName,
-      customerEmail: command.customerEmail,
-      deliveryAddress: command.deliveryAddress,
-      deliveryCity: command.deliveryCity,
-      customerPhone: command.customerPhone,
     });
+  }
 
-    // Call WOMPI via PaymentGatewayPort
-    let paymentResponse;
+  private async createPendingTransaction(
+    prepared: PreparedTransaction,
+    command: CreateTransactionCommand,
+  ): Promise<Result<PendingTransactionContext, TransactionFailure>> {
+    // Create PENDING transaction in DB
     try {
-      paymentResponse = await this.paymentGateway.createPayment({
-        amountInCents: totalAmountCents,
+      const pendingTransaction = await this.transactionRepository.save({
+        productId: prepared.product.id,
+        amountInCents: prepared.totalAmountCents,
         currency: 'COP',
-        reference,
+        status: TransactionStatus.PENDING,
+        wompiTransactionId: null,
+        reference: prepared.reference,
+        customerName: command.customerName,
+        customerEmail: command.customerEmail,
+        deliveryAddress: command.deliveryAddress,
+        deliveryCity: command.deliveryCity,
+        customerPhone: command.customerPhone,
+      });
+
+      return ok({
+        pendingTransaction,
+        totalAmountCents: prepared.totalAmountCents,
+        reference: prepared.reference,
+      });
+    } catch {
+      return err(transactionPersistenceFailure('create pending transaction'));
+    }
+  }
+
+  private async processPayment(
+    pendingContext: PendingTransactionContext,
+    command: CreateTransactionCommand,
+  ): Promise<Result<ProcessedPaymentContext, TransactionFailure>> {
+    // Call WOMPI via PaymentGatewayPort
+    try {
+      const paymentResponse = await this.paymentGateway.createPayment({
+        amountInCents: pendingContext.totalAmountCents,
+        currency: 'COP',
+        reference: pendingContext.reference,
         customerEmail: command.customerEmail,
         paymentMethodToken: command.tokenId,
         acceptanceToken: command.acceptanceToken,
         installments: 1,
       });
+
+      return ok({
+        pendingTransaction: pendingContext.pendingTransaction,
+        mappedStatus: WompiStatusMapper.toDomain(paymentResponse.status),
+        wompiTransactionId: paymentResponse.transactionId,
+      });
     } catch {
-      await this.transactionRepository.updateStatus(
-        pendingTransaction.id,
-        TransactionStatus.ERROR,
+      try {
+        await this.transactionRepository.updateStatus(
+          pendingContext.pendingTransaction.id,
+          TransactionStatus.ERROR,
+        );
+      } catch {
+        return err(
+          transactionPersistenceFailure('mark transaction as payment error'),
+        );
+      }
+
+      return err(paymentGatewayFailure());
+    }
+  }
+
+  private async finalizeTransaction(
+    processedPayment: ProcessedPaymentContext,
+  ): Promise<Result<FinalizedTransactionContext, TransactionFailure>> {
+    // Update transaction only while it is still PENDING to avoid double stock decrements
+    try {
+      const updatedTransaction =
+        await this.transactionRepository.updateStatusFromPending(
+          processedPayment.pendingTransaction.id,
+          processedPayment.mappedStatus,
+          processedPayment.wompiTransactionId,
+        );
+
+      if (updatedTransaction) {
+        return ok({
+          transaction: updatedTransaction,
+          shouldDecrementStock:
+            processedPayment.mappedStatus === TransactionStatus.APPROVED,
+        });
+      }
+
+      const currentTransaction = await this.transactionRepository.findById(
+        processedPayment.pendingTransaction.id,
       );
-      throw new Error('Payment gateway error');
+      if (!currentTransaction) {
+        return err(
+          transactionNotFoundFailure(processedPayment.pendingTransaction.id),
+        );
+      }
+
+      return ok({
+        transaction: currentTransaction,
+        shouldDecrementStock: false,
+      });
+    } catch {
+      return err(transactionPersistenceFailure('update transaction status'));
+    }
+  }
+
+  private async decrementStockIfApproved(
+    finalizedContext: FinalizedTransactionContext,
+  ): Promise<Result<Transaction, TransactionFailure>> {
+    if (!finalizedContext.shouldDecrementStock) {
+      return ok(finalizedContext.transaction);
     }
 
-    // Map WOMPI status to our TransactionStatus
-    const statusMap: Record<string, TransactionStatus> = {
-      APPROVED: TransactionStatus.APPROVED,
-      DECLINED: TransactionStatus.DECLINED,
-      VOIDED: TransactionStatus.VOIDED,
-      ERROR: TransactionStatus.ERROR,
-      PENDING: TransactionStatus.PENDING,
-    };
-    const mappedStatus =
-      statusMap[paymentResponse.status] ?? TransactionStatus.ERROR;
-
-    // Update transaction with result
-    const updatedTransaction = await this.transactionRepository.updateStatus(
-      pendingTransaction.id,
-      mappedStatus,
-      paymentResponse.transactionId,
-    );
-
-    // If APPROVED, decrement stock
-    if (mappedStatus === TransactionStatus.APPROVED) {
-      await this.productRepository.decrementStock(command.productId, 1);
+    try {
+      await this.productRepository.decrementStock(
+        finalizedContext.transaction.productId,
+        1,
+      );
+      return ok(finalizedContext.transaction);
+    } catch {
+      return err(stockUpdateFailedFailure(finalizedContext.transaction.productId));
     }
-
-    return updatedTransaction;
   }
 }

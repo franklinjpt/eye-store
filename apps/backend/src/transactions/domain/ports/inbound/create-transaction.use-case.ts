@@ -1,4 +1,6 @@
 import { Transaction } from '../../models/transaction';
+import { Result } from '../../../../common/result';
+import { TransactionFailure } from '../../errors/transaction.failure';
 
 export type CreateTransactionCommand = {
   productId: string;
@@ -12,5 +14,7 @@ export type CreateTransactionCommand = {
 };
 
 export interface CreateTransactionUseCase {
-  execute(command: CreateTransactionCommand): Promise<Transaction>;
+  execute(
+    command: CreateTransactionCommand,
+  ): Promise<Result<Transaction, TransactionFailure>>;
 }
