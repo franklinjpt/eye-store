@@ -95,4 +95,155 @@ describe('SummaryBackdrop', () => {
       }),
     ).toBeTruthy();
   });
+
+  it('should return null when product or deliveryInfo is missing', () => {
+    const store = configureStore({
+      reducer: {
+        products: productsSlice.reducer,
+        checkout: checkoutSlice.reducer,
+        ui: uiSlice.reducer,
+      },
+      preloadedState: {
+        products: { items: [], loading: false, error: null },
+        checkout: {
+          currentStep: 'summary' as const,
+          selectedProductId: null,
+          deliveryInfo: null,
+          cardTokenId: null,
+          acceptanceToken: null,
+          transactionResult: null,
+          isProcessing: false,
+          isPolling: false,
+          error: null,
+        },
+        ui: { isModalOpen: false },
+      },
+    });
+
+    const { container } = render(
+      <Provider store={store}>
+        <SummaryBackdrop />
+      </Provider>,
+    );
+
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('should display delivery info (name, address, city, email, phone)', () => {
+    const preloadedState = {
+      products: {
+        items: [
+          {
+            id: 'product-1',
+            name: 'Blue Frame',
+            price: 120000,
+            stock: 5,
+            position: 1,
+            description: 'Comfortable frame',
+            type: 'FRAME',
+            sku: 'SKU-1',
+            image: 'https://example.com/frame.jpg',
+          },
+        ],
+        loading: false,
+        error: null,
+      },
+      checkout: {
+        currentStep: 'summary' as const,
+        selectedProductId: 'product-1',
+        deliveryInfo: {
+          fullName: 'Jane Doe',
+          email: 'jane@example.com',
+          address: 'Street 123',
+          city: 'Bogota',
+          phone: '3001234567',
+        },
+        cardTokenId: 'tok_test',
+        acceptanceToken: 'accept_test',
+        transactionResult: null,
+        isProcessing: false,
+        isPolling: false,
+        error: null,
+      },
+      ui: { isModalOpen: false },
+    };
+
+    const store = configureStore({
+      reducer: {
+        products: productsSlice.reducer,
+        checkout: checkoutSlice.reducer,
+        ui: uiSlice.reducer,
+      },
+      preloadedState,
+    });
+
+    render(
+      <Provider store={store}>
+        <SummaryBackdrop />
+      </Provider>,
+    );
+
+    expect(screen.getByText('Jane Doe')).toBeTruthy();
+    expect(screen.getByText(/Street 123/)).toBeTruthy();
+    expect(screen.getByText(/Bogota/)).toBeTruthy();
+    expect(screen.getByText('jane@example.com')).toBeTruthy();
+    expect(screen.getByText('3001234567')).toBeTruthy();
+  });
+
+  it('should show Processing spinner when isProcessing is true', () => {
+    const preloadedState = {
+      products: {
+        items: [
+          {
+            id: 'product-1',
+            name: 'Blue Frame',
+            price: 120000,
+            stock: 5,
+            position: 1,
+            description: 'Comfortable frame',
+            type: 'FRAME',
+            sku: 'SKU-1',
+            image: 'https://example.com/frame.jpg',
+          },
+        ],
+        loading: false,
+        error: null,
+      },
+      checkout: {
+        currentStep: 'summary' as const,
+        selectedProductId: 'product-1',
+        deliveryInfo: {
+          fullName: 'Jane Doe',
+          email: 'jane@example.com',
+          address: 'Street 123',
+          city: 'Bogota',
+          phone: '3001234567',
+        },
+        cardTokenId: 'tok_test',
+        acceptanceToken: 'accept_test',
+        transactionResult: null,
+        isProcessing: true,
+        isPolling: false,
+        error: null,
+      },
+      ui: { isModalOpen: false },
+    };
+
+    const store = configureStore({
+      reducer: {
+        products: productsSlice.reducer,
+        checkout: checkoutSlice.reducer,
+        ui: uiSlice.reducer,
+      },
+      preloadedState,
+    });
+
+    render(
+      <Provider store={store}>
+        <SummaryBackdrop />
+      </Provider>,
+    );
+
+    expect(screen.getByText(/Processing/i)).toBeTruthy();
+  });
 });

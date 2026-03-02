@@ -112,4 +112,126 @@ describe('TransactionController', () => {
       expect((error as HttpException).getStatus()).toBe(404);
     }
   });
+
+  it('should return 409 for OUT_OF_STOCK', async () => {
+    createTransactionViewUseCase.execute.mockResolvedValue(
+      err({
+        code: 'OUT_OF_STOCK',
+        message: 'Product "product-1" is out of stock',
+      }),
+    );
+
+    try {
+      await controller.create({
+        productId: 'product-1',
+        tokenId: 'tok',
+        acceptanceToken: 'accept',
+        customerName: 'Jane Doe',
+        customerEmail: 'jane@example.com',
+        deliveryAddress: 'Street 123',
+        deliveryCity: 'Bogota',
+        customerPhone: '3001234567',
+      });
+      fail('Expected controller to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(409);
+    }
+  });
+
+  it('should return 502 for PAYMENT_GATEWAY_ERROR', async () => {
+    createTransactionViewUseCase.execute.mockResolvedValue(
+      err({
+        code: 'PAYMENT_GATEWAY_ERROR',
+        message: 'Payment gateway error',
+      }),
+    );
+
+    try {
+      await controller.create({
+        productId: 'product-1',
+        tokenId: 'tok',
+        acceptanceToken: 'accept',
+        customerName: 'Jane Doe',
+        customerEmail: 'jane@example.com',
+        deliveryAddress: 'Street 123',
+        deliveryCity: 'Bogota',
+        customerPhone: '3001234567',
+      });
+      fail('Expected controller to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(502);
+    }
+  });
+
+  it('should return 500 for TRANSACTION_PERSISTENCE_ERROR', async () => {
+    createTransactionViewUseCase.execute.mockResolvedValue(
+      err({
+        code: 'TRANSACTION_PERSISTENCE_ERROR',
+        message: 'Transaction persistence failure during create',
+      }),
+    );
+
+    try {
+      await controller.create({
+        productId: 'product-1',
+        tokenId: 'tok',
+        acceptanceToken: 'accept',
+        customerName: 'Jane Doe',
+        customerEmail: 'jane@example.com',
+        deliveryAddress: 'Street 123',
+        deliveryCity: 'Bogota',
+        customerPhone: '3001234567',
+      });
+      fail('Expected controller to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(500);
+    }
+  });
+
+  it('should return 409 for STOCK_UPDATE_FAILED', async () => {
+    createTransactionViewUseCase.execute.mockResolvedValue(
+      err({
+        code: 'STOCK_UPDATE_FAILED',
+        message: 'Unable to decrement stock for product "product-1"',
+      }),
+    );
+
+    try {
+      await controller.create({
+        productId: 'product-1',
+        tokenId: 'tok',
+        acceptanceToken: 'accept',
+        customerName: 'Jane Doe',
+        customerEmail: 'jane@example.com',
+        deliveryAddress: 'Street 123',
+        deliveryCity: 'Bogota',
+        customerPhone: '3001234567',
+      });
+      fail('Expected controller to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(409);
+    }
+  });
+
+  it('should return transaction response dto for findOne', async () => {
+    getTransactionViewUseCase.execute.mockResolvedValue(
+      ok({
+        id: 'tx-1',
+        status: TransactionStatus.APPROVED,
+        reference: 'REF-1',
+        amountInCents: 1000,
+        productName: 'Blue Frame',
+      }),
+    );
+
+    const result = await controller.findOne('tx-1');
+
+    expect(result.id).toBe('tx-1');
+    expect(result.status).toBe(TransactionStatus.APPROVED);
+    expect(result.productName).toBe('Blue Frame');
+  });
 });

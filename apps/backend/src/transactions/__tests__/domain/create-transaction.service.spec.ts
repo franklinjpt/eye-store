@@ -293,4 +293,230 @@ describe('CreateTransactionService', () => {
     }
     expect(productRepository.decrementStock).not.toHaveBeenCalled();
   });
+
+  it('should return TRANSACTION_PERSISTENCE_ERROR when saving pending transaction fails', async () => {
+    productRepository.findById.mockResolvedValue({
+      id: command.productId,
+      name: 'Test Frame',
+      price: 100000,
+      description: 'test',
+      type: ProductType.FRAME,
+      stock: 1,
+      position: 1,
+      sku: 'SKU-1',
+      image: 'https://example.com/image.jpg',
+    });
+    transactionRepository.save.mockRejectedValue(new Error('db error'));
+
+    const result = await service.execute(command);
+
+    expect(result.kind).toBe('err');
+    if (result.kind === 'err') {
+      expect(result.error.code).toBe('TRANSACTION_PERSISTENCE_ERROR');
+    }
+  });
+
+  it('should return TRANSACTION_PERSISTENCE_ERROR when marking error status fails after gateway error', async () => {
+    productRepository.findById.mockResolvedValue({
+      id: command.productId,
+      name: 'Test Frame',
+      price: 100000,
+      description: 'test',
+      type: ProductType.FRAME,
+      stock: 1,
+      position: 1,
+      sku: 'SKU-1',
+      image: 'https://example.com/image.jpg',
+    });
+    transactionRepository.save.mockResolvedValue({
+      id: 'tx-1',
+      productId: command.productId,
+      amountInCents: expectedTransactionAmountCents,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: null,
+      reference: 'REF-1',
+      customerName: command.customerName,
+      customerEmail: command.customerEmail,
+      deliveryAddress: command.deliveryAddress,
+      deliveryCity: command.deliveryCity,
+      customerPhone: command.customerPhone,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    paymentGateway.createPayment.mockRejectedValue(new Error('wompi down'));
+    transactionRepository.updateStatus.mockRejectedValue(
+      new Error('db error'),
+    );
+
+    const result = await service.execute(command);
+
+    expect(result.kind).toBe('err');
+    if (result.kind === 'err') {
+      expect(result.error.code).toBe('TRANSACTION_PERSISTENCE_ERROR');
+    }
+  });
+
+  it('should return TRANSACTION_PERSISTENCE_ERROR when finalizing transaction fails', async () => {
+    productRepository.findById.mockResolvedValue({
+      id: command.productId,
+      name: 'Test Frame',
+      price: 100000,
+      description: 'test',
+      type: ProductType.FRAME,
+      stock: 1,
+      position: 1,
+      sku: 'SKU-1',
+      image: 'https://example.com/image.jpg',
+    });
+    transactionRepository.save.mockResolvedValue({
+      id: 'tx-1',
+      productId: command.productId,
+      amountInCents: expectedTransactionAmountCents,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: null,
+      reference: 'REF-1',
+      customerName: command.customerName,
+      customerEmail: command.customerEmail,
+      deliveryAddress: command.deliveryAddress,
+      deliveryCity: command.deliveryCity,
+      customerPhone: command.customerPhone,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    paymentGateway.createPayment.mockResolvedValue({
+      transactionId: 'wompi-1',
+      status: 'APPROVED',
+    });
+    transactionRepository.updateStatusFromPending.mockRejectedValue(
+      new Error('db error'),
+    );
+
+    const result = await service.execute(command);
+
+    expect(result.kind).toBe('err');
+    if (result.kind === 'err') {
+      expect(result.error.code).toBe('TRANSACTION_PERSISTENCE_ERROR');
+    }
+  });
+
+  it('should return STOCK_UPDATE_FAILED when stock decrement throws', async () => {
+    productRepository.findById.mockResolvedValue({
+      id: command.productId,
+      name: 'Test Frame',
+      price: 100000,
+      description: 'test',
+      type: ProductType.FRAME,
+      stock: 1,
+      position: 1,
+      sku: 'SKU-1',
+      image: 'https://example.com/image.jpg',
+    });
+    transactionRepository.save.mockResolvedValue({
+      id: 'tx-1',
+      productId: command.productId,
+      amountInCents: expectedTransactionAmountCents,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: null,
+      reference: 'REF-1',
+      customerName: command.customerName,
+      customerEmail: command.customerEmail,
+      deliveryAddress: command.deliveryAddress,
+      deliveryCity: command.deliveryCity,
+      customerPhone: command.customerPhone,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    paymentGateway.createPayment.mockResolvedValue({
+      transactionId: 'wompi-1',
+      status: 'APPROVED',
+    });
+    transactionRepository.updateStatusFromPending.mockResolvedValue({
+      id: 'tx-1',
+      productId: command.productId,
+      amountInCents: expectedTransactionAmountCents,
+      currency: 'COP',
+      status: TransactionStatus.APPROVED,
+      wompiTransactionId: 'wompi-1',
+      reference: 'REF-1',
+      customerName: command.customerName,
+      customerEmail: command.customerEmail,
+      deliveryAddress: command.deliveryAddress,
+      deliveryCity: command.deliveryCity,
+      customerPhone: command.customerPhone,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    productRepository.decrementStock.mockRejectedValue(
+      new Error('stock error'),
+    );
+
+    const result = await service.execute(command);
+
+    expect(result.kind).toBe('err');
+    if (result.kind === 'err') {
+      expect(result.error.code).toBe('STOCK_UPDATE_FAILED');
+    }
+  });
+
+  it('should return pending transaction without decrementing stock when payment status is PENDING', async () => {
+    productRepository.findById.mockResolvedValue({
+      id: command.productId,
+      name: 'Test Frame',
+      price: 100000,
+      description: 'test',
+      type: ProductType.FRAME,
+      stock: 1,
+      position: 1,
+      sku: 'SKU-1',
+      image: 'https://example.com/image.jpg',
+    });
+    transactionRepository.save.mockResolvedValue({
+      id: 'tx-1',
+      productId: command.productId,
+      amountInCents: expectedTransactionAmountCents,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: null,
+      reference: 'REF-1',
+      customerName: command.customerName,
+      customerEmail: command.customerEmail,
+      deliveryAddress: command.deliveryAddress,
+      deliveryCity: command.deliveryCity,
+      customerPhone: command.customerPhone,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    paymentGateway.createPayment.mockResolvedValue({
+      transactionId: 'wompi-1',
+      status: 'PENDING',
+    });
+    transactionRepository.updateStatusFromPending.mockResolvedValue({
+      id: 'tx-1',
+      productId: command.productId,
+      amountInCents: expectedTransactionAmountCents,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: 'wompi-1',
+      reference: 'REF-1',
+      customerName: command.customerName,
+      customerEmail: command.customerEmail,
+      deliveryAddress: command.deliveryAddress,
+      deliveryCity: command.deliveryCity,
+      customerPhone: command.customerPhone,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await service.execute(command);
+
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.value.status).toBe(TransactionStatus.PENDING);
+      expect(result.value.wompiTransactionId).toBe('wompi-1');
+    }
+    expect(productRepository.decrementStock).not.toHaveBeenCalled();
+  });
 });

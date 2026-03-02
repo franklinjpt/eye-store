@@ -184,4 +184,178 @@ describe('GetTransactionService', () => {
     }
     expect(productRepository.decrementStock).not.toHaveBeenCalled();
   });
+
+  it('should return non-pending transaction without calling Wompi', async () => {
+    transactionRepository.findById.mockResolvedValue({
+      id: 'tx-1',
+      productId: 'product-1',
+      amountInCents: 1000,
+      currency: 'COP',
+      status: TransactionStatus.APPROVED,
+      wompiTransactionId: 'wompi-1',
+      reference: 'REF-1',
+      customerName: 'Jane Doe',
+      customerEmail: 'jane@example.com',
+      deliveryAddress: 'Street 123',
+      deliveryCity: 'Bogota',
+      customerPhone: '3001234567',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await service.execute('tx-1');
+
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.value.status).toBe(TransactionStatus.APPROVED);
+    }
+    expect(paymentGateway.getTransactionStatus).not.toHaveBeenCalled();
+  });
+
+  it('should return pending transaction as-is when wompiTransactionId is null', async () => {
+    transactionRepository.findById.mockResolvedValue({
+      id: 'tx-1',
+      productId: 'product-1',
+      amountInCents: 1000,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: null,
+      reference: 'REF-1',
+      customerName: 'Jane Doe',
+      customerEmail: 'jane@example.com',
+      deliveryAddress: 'Street 123',
+      deliveryCity: 'Bogota',
+      customerPhone: '3001234567',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await service.execute('tx-1');
+
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.value.status).toBe(TransactionStatus.PENDING);
+    }
+    expect(paymentGateway.getTransactionStatus).not.toHaveBeenCalled();
+  });
+
+  it('should not decrement stock when pending transitions to DECLINED', async () => {
+    transactionRepository.findById.mockResolvedValue({
+      id: 'tx-1',
+      productId: 'product-1',
+      amountInCents: 1000,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: 'wompi-1',
+      reference: 'REF-1',
+      customerName: 'Jane Doe',
+      customerEmail: 'jane@example.com',
+      deliveryAddress: 'Street 123',
+      deliveryCity: 'Bogota',
+      customerPhone: '3001234567',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    paymentGateway.getTransactionStatus.mockResolvedValue('DECLINED');
+    transactionRepository.updateStatusFromPending.mockResolvedValue({
+      id: 'tx-1',
+      productId: 'product-1',
+      amountInCents: 1000,
+      currency: 'COP',
+      status: TransactionStatus.DECLINED,
+      wompiTransactionId: 'wompi-1',
+      reference: 'REF-1',
+      customerName: 'Jane Doe',
+      customerEmail: 'jane@example.com',
+      deliveryAddress: 'Street 123',
+      deliveryCity: 'Bogota',
+      customerPhone: '3001234567',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await service.execute('tx-1');
+
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.value.status).toBe(TransactionStatus.DECLINED);
+    }
+    expect(productRepository.decrementStock).not.toHaveBeenCalled();
+  });
+
+  it('should return TRANSACTION_PERSISTENCE_ERROR when updateStatusFromPending throws', async () => {
+    transactionRepository.findById.mockResolvedValue({
+      id: 'tx-1',
+      productId: 'product-1',
+      amountInCents: 1000,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: 'wompi-1',
+      reference: 'REF-1',
+      customerName: 'Jane Doe',
+      customerEmail: 'jane@example.com',
+      deliveryAddress: 'Street 123',
+      deliveryCity: 'Bogota',
+      customerPhone: '3001234567',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    paymentGateway.getTransactionStatus.mockResolvedValue('APPROVED');
+    transactionRepository.updateStatusFromPending.mockRejectedValue(
+      new Error('db error'),
+    );
+
+    const result = await service.execute('tx-1');
+
+    expect(result.kind).toBe('err');
+    if (result.kind === 'err') {
+      expect(result.error.code).toBe('TRANSACTION_PERSISTENCE_ERROR');
+    }
+  });
+
+  it('should return STOCK_UPDATE_FAILED when stock decrement throws', async () => {
+    transactionRepository.findById.mockResolvedValue({
+      id: 'tx-1',
+      productId: 'product-1',
+      amountInCents: 1000,
+      currency: 'COP',
+      status: TransactionStatus.PENDING,
+      wompiTransactionId: 'wompi-1',
+      reference: 'REF-1',
+      customerName: 'Jane Doe',
+      customerEmail: 'jane@example.com',
+      deliveryAddress: 'Street 123',
+      deliveryCity: 'Bogota',
+      customerPhone: '3001234567',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    paymentGateway.getTransactionStatus.mockResolvedValue('APPROVED');
+    transactionRepository.updateStatusFromPending.mockResolvedValue({
+      id: 'tx-1',
+      productId: 'product-1',
+      amountInCents: 1000,
+      currency: 'COP',
+      status: TransactionStatus.APPROVED,
+      wompiTransactionId: 'wompi-1',
+      reference: 'REF-1',
+      customerName: 'Jane Doe',
+      customerEmail: 'jane@example.com',
+      deliveryAddress: 'Street 123',
+      deliveryCity: 'Bogota',
+      customerPhone: '3001234567',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    productRepository.decrementStock.mockRejectedValue(
+      new Error('stock error'),
+    );
+
+    const result = await service.execute('tx-1');
+
+    expect(result.kind).toBe('err');
+    if (result.kind === 'err') {
+      expect(result.error.code).toBe('STOCK_UPDATE_FAILED');
+    }
+  });
 });
