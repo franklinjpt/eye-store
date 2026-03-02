@@ -1,4 +1,4 @@
-import { ShoppingBag } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { IconWrapper } from '../ui/IconWrapper';
 import { cn } from '../ui/cn';
@@ -7,9 +7,10 @@ export interface AddToCartButtonProps {
   disabled?: boolean;
   onClick?: () => void;
   className?: string;
+  label?: string;
 }
 
-export function AddToCartButton({ disabled, onClick, className }: AddToCartButtonProps) {
+export function AddToCartButton({ disabled, onClick, className, label = 'Pay with Credit Card' }: AddToCartButtonProps) {
   return (
     <Button
       variant='glass'
@@ -21,9 +22,9 @@ export function AddToCartButton({ disabled, onClick, className }: AddToCartButto
       )}
     >
       <IconWrapper className='h-8 w-8 border-none bg-transparent p-1 group-hover:text-accent transition-colors'>
-        <ShoppingBag className='h-5 w-5' />
+        <CreditCard className='h-5 w-5' />
       </IconWrapper>
-      <span className='font-sans tracking-wide'>Add to Cart</span>
+      <span className='font-sans tracking-wide'>{label}</span>
     </Button>
   );
 }

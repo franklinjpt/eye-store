@@ -33,5 +33,9 @@ import {
     },
     ProductSeedService,
   ],
+  exports: [
+    PRODUCT_REPOSITORY_PORT,
+    ProductRepository,
+  ],
 })
 export class ProductsModule {}

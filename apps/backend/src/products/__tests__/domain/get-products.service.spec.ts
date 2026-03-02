@@ -38,6 +38,7 @@ describe('GetProductsService', () => {
       findById: jest.fn(),
       count: jest.fn(),
       saveMany: jest.fn(),
+      decrementStock: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

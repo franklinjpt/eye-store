@@ -34,6 +34,25 @@ interface FormErrors {
   cardholderName?: string;
 }
 
+type CardBrand = 'visa' | 'mastercard' | null;
+
+function detectCardBrand(number: string): CardBrand {
+  const digits = number.replace(/\s/g, '');
+  if (!digits) return null;
+
+  // VISA: starts with 4
+  if (/^4/.test(digits)) return 'visa';
+
+  // MasterCard: starts with 51-55 or 2221-2720
+  const twoDigit = parseInt(digits.slice(0, 2), 10);
+  const fourDigit = parseInt(digits.slice(0, 4), 10);
+  if ((twoDigit >= 51 && twoDigit <= 55) || (fourDigit >= 2221 && fourDigit <= 2720)) {
+    return 'mastercard';
+  }
+
+  return null;
+}
+
 function validate(
   cardNumber: string,
   expiry: string,
@@ -68,12 +87,30 @@ function validate(
   return errors;
 }
 
+function CardBrandBadge({ brand }: { brand: CardBrand }) {
+  if (!brand) return null;
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold tracking-wider uppercase',
+        brand === 'visa' && 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+        brand === 'mastercard' && 'bg-orange-500/20 text-orange-300 border border-orange-500/30',
+      )}
+    >
+      {brand === 'visa' ? 'VISA' : 'MC'}
+    </span>
+  );
+}
+
 export function CreditCardForm({ onSubmit, onBack, isLoading }: CreditCardFormProps) {
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardholderName, setCardholderName] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
+
+  const cardBrand = detectCardBrand(cardNumber);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -110,8 +147,11 @@ export function CreditCardForm({ onSubmit, onBack, isLoading }: CreditCardFormPr
               placeholder='1234 5678 9012 3456'
               inputMode='numeric'
               autoComplete='cc-number'
-              className={cn('pl-12 min-h-[44px]', errors.cardNumber && 'border-rose-500/50')}
+              className={cn('pl-12 pr-16 min-h-[44px]', errors.cardNumber && 'border-rose-500/50')}
             />
+            <div className='absolute inset-y-0 right-0 flex items-center pr-3'>
+              <CardBrandBadge brand={cardBrand} />
+            </div>
           </div>
         </FormField>
 
@@ -180,7 +220,7 @@ export function CreditCardForm({ onSubmit, onBack, isLoading }: CreditCardFormPr
             disabled={isLoading}
             className='min-h-[44px] flex-1'
           >
-            {isLoading ? 'Processing...' : 'Continue to Summary'}
+            {isLoading ? 'Processing...' : 'Continue'}
           </Button>
           {onBack && (
             <Button
@@ -189,7 +229,7 @@ export function CreditCardForm({ onSubmit, onBack, isLoading }: CreditCardFormPr
               onClick={onBack}
               className='min-h-[44px] flex-1'
             >
-              Back to Cart
+              Cancel
             </Button>
           )}
         </div>

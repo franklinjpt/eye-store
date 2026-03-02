@@ -35,4 +35,17 @@ export class ProductRepository implements ProductRepositoryPort {
     const saved = await this.ormRepository.save(entities);
     return saved.map(ProductPersistenceMapper.toDomain);
   }
+
+  async decrementStock(productId: string, quantity: number): Promise<void> {
+    const result = await this.ormRepository
+      .createQueryBuilder()
+      .update()
+      .set({ stock: () => `stock - ${quantity}` })
+      .where('id = :id AND stock >= :quantity', { id: productId, quantity })
+      .execute();
+
+    if (result.affected === 0) {
+      throw new Error('Insufficient stock or product not found');
+    }
+  }
 }

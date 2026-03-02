@@ -2,28 +2,22 @@ import { GlassCard } from '../ui/glass-card';
 import { ProductImage } from './product-image.component';
 import { ProductInfo } from './product-info.component';
 import { AddToCartButton } from './add-to-cart-button.component';
+import type { Product } from '@/types';
 
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  description: string;
-  imageUrl: string;
-}
+export type { Product };
 
 interface ProductCardProps {
   product: Product;
-  onAddToCart?: () => void;
+  onBuy?: () => void;
 }
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, onBuy }: ProductCardProps) {
   const isOutOfStock = product.stock === 0;
 
   return (
     <GlassCard>
       <ProductImage
-        src={product.imageUrl}
+        src={product.image}
         alt={product.name}
         stock={product.stock}
       />
@@ -32,7 +26,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         price={product.price}
         description={product.description}
       />
-      <AddToCartButton disabled={isOutOfStock} onClick={onAddToCart} />
+      <AddToCartButton
+        disabled={isOutOfStock}
+        onClick={onBuy}
+        label={isOutOfStock ? 'Out of Stock' : 'Pay with Credit Card'}
+      />
     </GlassCard>
   );
 }
